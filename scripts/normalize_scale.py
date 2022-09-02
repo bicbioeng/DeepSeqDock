@@ -2,6 +2,7 @@ import argparse
 import time
 from pathlib import Path
 import os
+import subprocess
 import json
 # import pickle
 
@@ -14,15 +15,15 @@ import preprocessing as pp
 
 import warnings
 
-
-parser = argparse.ArgumentParser(description='This script preprocesses and scales the training and test/validation datasets '
-                                             'by standard and non-standard RNA-sequencing preprocessing methods. '
-                                             ' Frozen preprocessing is applied by fitting variables to the training dataset'
-                                             ' and applying the frozen algorithm and parameters to test/validation datasets.'
-                                             ' Two scaling methods suitable for downstream AE building can also be applied  -'
-                                             ' a global min-max scaling and a feature min-max scaling. Input datasets'
-                                             ' should be formatted as a csv with samples as rows and features as columns.'
-                                             ' Data is output as csvs indicating preprocessing and scaling method.')
+parser = argparse.ArgumentParser(
+    description='This script preprocesses and scales the training and test/validation datasets '
+                'by standard and non-standard RNA-sequencing preprocessing methods. '
+                ' Frozen preprocessing is applied by fitting variables to the training dataset'
+                ' and applying the frozen algorithm and parameters to test/validation datasets.'
+                ' Two scaling methods suitable for downstream AE building can also be applied  -'
+                ' a global min-max scaling and a feature min-max scaling. Input datasets'
+                ' should be formatted as a csv with samples as rows and features as columns.'
+                ' Data is output as csvs indicating preprocessing and scaling method.')
 parser.add_argument('-d', '--train_data', type=str,
                     help='Path to training data csv. Samples as rows and features as columns. Must contain same'
                          ' feature list as training data.', required=True)
@@ -91,6 +92,7 @@ def sklearn_to_json(scaler, file):
     with open(file, "w") as handle:
         json.dump(model, handle)
 
+
 ## Set up vectors for 'all' preprocessing, scaling
 if 'All' in args.preprocessing_method:
     args.preprocessing_method = ['None', 'LS', 'TPM', 'QT', 'RLE', 'VST', 'GeVST', 'TMM', 'GeTMM']
@@ -129,10 +131,9 @@ if args.test_data:
     for t in args.test_data:
         test_data[t] = pd.read_csv(Path(t), index_col=0).astype('float32')
 
-gene_length = pd.read_csv((Path.cwd().parents[0] / 'supporting' / 'genelength.csv'), index_col = 0).iloc[:,0]
+gene_length = pd.read_csv((Path.cwd().parents[0] / 'supporting' / 'genelength.csv'), index_col=0).iloc[:, 0]
 
 seed = randint(1, 100)
-
 
 ## Check data for numeric, NAs
 if not train[~train.applymap(lambda x: isinstance(x, (int, float))).all(1)].empty:
@@ -149,7 +150,6 @@ if args.test_data:
         if test_data[t].isna().to_numpy().sum() > 0:
             raise Exception("Imported dataset " + t + " contains NAs or empty values.")
 
-
 ## Niceify data - remove outliers, add pseudocount, remove 0 genes
 niceify = pp.NiceifyRawCountData(cap=0.99)
 
@@ -158,7 +158,8 @@ trainz = niceify.fit_transform(train)
 print("Dimensions of full dataset: ", train.shape)
 print("Dimensions of dataset no zeros: ", trainz.shape)
 
-trainz.to_csv(dataset_path / (run_id + '_train-none_none.csv'))
+trainz_path = (dataset_path / (run_id + '_train-none_none.csv')).as_posix()
+trainz.to_csv(trainz_path)
 
 # Save feature-wise medians for imputing
 with open(model_path / (run_id + '-raw_medians.json'), "w") as handle:
@@ -168,10 +169,12 @@ del train
 
 if args.test_data:
     testz = {}
+    testz_path = {}
     for t in args.test_data:
         testz[t] = niceify.transform(test_data[t])
 
-        testz[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-none_none.csv'))
+        testz_path[t] = (dataset_path / (run_id + '_' + Path(t).stem + '-none_none.csv')).as_posix()
+        testz[t].to_csv(testz_path[t])
 del test_data
 
 ### Plot niceified data
@@ -335,58 +338,92 @@ for p in prep_method:
                     test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
 
         case 'VST':
-            os.system(('./VST_preprocessing.R -d "' + args.train_data + '" -t "' + '" "'.join(
-                args.test_data) + '" -o "' + str(dataset_path) + '" -r ' + run_id +
+
+            if args.test_data:
+                poi = trainz_path + '" -t "' + '" "'.join(
+                    testz_path.values())
+            else:
+                poi = trainz_path
+
+            os.system(('./VST_preprocessing.R -d "' + poi +
+                       '" -o "' + str(dataset_path) + '" -r ' + run_id +
                        ' -p "' + str(model_path) + '"' +
-                ' --datetime ' + run_id))
+                       ' --datetime ' + run_id))
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
             if args.test_data:
                 test_prep = {}
                 for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'), index_col=0)
+                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                               index_col=0)
 
         case 'GeVST':
 
-            os.system(('./GeVST_preprocessing.R -d "' + args.train_data + '" -t "' + '" "'.join(
-                args.test_data) + '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                ' -p "' + str(model_path)
-                + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
-                ' --datetime ' + run_id)
+            if args.test_data:
+                poi = trainz_path + '" -t "' + '" "'.join(
+                    testz_path.values())
+            else:
+                poi = trainz_path
+
+            os.system(('./GeVST_preprocessing.R -d "' + poi
+                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
+                       ' -p "' + str(model_path)
+                       + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
+                      ' --datetime ' + run_id)
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
             if args.test_data:
                 test_prep = {}
                 for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'), index_col=0)
+                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                               index_col=0)
         case 'TMM':
-            os.system(('./TMM_preprocessing.R -d "' + args.train_data + '" -t "' + '" "'.join(
-                args.test_data) + '" -o "' + str(dataset_path) + '" -r ' + run_id +
+
+            if args.test_data:
+                poi = trainz_path + '" -t "' + '" "'.join(
+                    testz_path.values())
+            else:
+                poi = trainz_path
+
+            os.system(('./TMM_preprocessing.R -d "' + poi
+                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
                        ' -p "' + str(model_path) + '"') +
-                ' --datetime ' + run_id)
+                      ' --datetime ' + run_id)
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
             if args.test_data:
                 test_prep = {}
                 for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'), index_col=0)
+                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                               index_col=0)
         case 'GeTMM':
-            os.system(('./GeTMM_preprocessing.R -d "' + args.train_data + '" -t "' + '" "'.join(
-                args.test_data) + '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                ' -p "' + str(model_path)
-                + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
-                ' --datetime ' + run_id)
 
+            if args.test_data:
+                poi = trainz_path + '" -t "' + '" "'.join(
+                    testz_path.values())
+            else:
+                poi = trainz_path
+
+            os.system(('./GeTMM_preprocessing.R -d "' + poi
+                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
+                       ' -p "' + str(model_path)
+                       + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
+                      ' --datetime ' + run_id)
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
             if args.test_data:
                 test_prep = {}
                 for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'), index_col=0)
+                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                               index_col=0)
+
+        case 'None':
+            train_prep = pd.read_csv(dataset_path / (run_id + '_train-none_none.csv'), index_col=0)
+
 
     ### Plot prep data
     if not args.plots[0] == 'False':
@@ -443,10 +480,10 @@ for p in prep_method:
                 else:
                     try:
                         pp.save_distributions(train_prep_gm,
-                                          outdir=qc_path,
-                                          prefix=('train-' + p + '_global'),
-                                          genes=args.plots,
-                                          random_state=seed)
+                                              outdir=qc_path,
+                                              prefix=('train-' + p + '_global'),
+                                              genes=args.plots,
+                                              random_state=seed)
                     except:
                         warnings.warn("Unable to plot all distributions for " + p + " global scaled data.")
             del train_prep_gm, global_scaler
@@ -457,8 +494,8 @@ for p in prep_method:
             feature_scaler = pp.MinMaxScaler()
 
             train_prep_sm = pd.DataFrame(feature_scaler.fit_transform(train_prep),
-                                        index=train_prep.index,
-                                        columns=train_prep.columns)
+                                         index=train_prep.index,
+                                         columns=train_prep.columns)
 
             train_prep_sm.to_csv(dataset_path / (run_id + '_train-' + p + '_feature.csv'))
 
@@ -471,9 +508,9 @@ for p in prep_method:
                 for t in args.test_data:
                     test_prep_sm = None
                     test_prep_sm = pd.DataFrame(feature_scaler.transform(test_prep[t]),
-                                               index=test_prep[t].index,
-                                               columns=test_prep[t].columns)
-                    test_prep_sm.to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' +  p + '_feature.csv'))
+                                                index=test_prep[t].index,
+                                                columns=test_prep[t].columns)
+                    test_prep_sm.to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_feature.csv'))
                 del test_prep_sm, test_prep
 
             if not args.plots[0] == 'False':

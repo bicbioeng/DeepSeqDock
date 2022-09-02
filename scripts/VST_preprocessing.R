@@ -122,9 +122,9 @@ vst_preprocessing <- function(file, geneCorr = c('none', 'rpk'), dispersionList=
     
     #get geometric means of genes (to freeze)
     gm <- exp(colMeans(log(data)))
-    
-    
+
     colData = data.frame('sample'=rownames(data))
+
     dds = DESeqDataSetFromMatrix(countData = t(data),
                                  colData = colData,
                                  design = ~1)
@@ -183,9 +183,15 @@ vst_preprocessing <- function(file, geneCorr = c('none', 'rpk'), dispersionList=
     vst = varianceStabilizingTransformation(dds, blind=FALSE) #False in order to use dispersion estimates from DESeq
     
     vst_mz = t(assay(vst))
-    
-    vstname = sub("\\.csv", "", basename(file))
-    
+
+    vstname = basename(file)
+
+    vstname = sub("-[[:alpha:]]{2,4}_(none|global|feature)\\.csv", "", vstname)
+    vstname = sub("preprocess_\\d{4}_\\d{2}_\\d{2}-\\d{2}_\\d{2}_\\d{2}_", "", vstname)
+
+    # If not already preprocessed
+    vstname = sub("\\.csv", "", vstname)
+
     write.csv(vst_mz, file.path(output, paste0(run_id, '_', vstname, "-", prefix, "_none.csv")))
   }
 }
