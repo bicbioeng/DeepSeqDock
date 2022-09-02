@@ -42,13 +42,17 @@ except:
     raise NameError('Normalization and scaling methods could not be parsed from autoencoder metadata.')
 
 # Identify normalization file location
-if norm in ['none', 'LS', 'TPM', 'QT', 'RLE']:
+if norm in ['LS', 'TPM', 'QT', 'RLE']:
     preprocessing_path =  (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / prep_run_id /
             (prep_run_id + '-' + norm + '_none_model.json')).as_posix()
 
 elif norm in ['VST', 'GeVST', 'TMM', 'GeTMM']:
     preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / prep_run_id /
                           (args.preprcessing_method + "_parameters.txt")).as_posix()
+
+elif norm == 'none':
+    preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / prep_run_id /
+                          ("none.none")).as_posix()
 
 else:
     raise KeyError(norm + ' is not one of none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM')

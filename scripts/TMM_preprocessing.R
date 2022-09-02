@@ -305,7 +305,13 @@ tmm_preprocessing <- function(file, referenceSample=NULL){
     data_f = cbind(refs$ref, data)
     data_list_tmm = calcNormFactors.modified(data_f, refColumn = 1, factor_scaling = refs$factor_scaling)
     
-    tmmname = sub("\\.csv", "", basename(file))
+    # Get root name with or without preprocessing metadata
+    tmmname = basename(file)
+    
+    tmmname = sub("-[[:alpha:]]{2,4}_(none|global|feature)\\.csv", "", tmmname)
+    tmmname = sub("preprocess_\\d{4}_\\d{2}_\\d{2}-\\d{2}_\\d{2}_\\d{2}_", "", tmmname)
+    
+    tmmname = sub("\\.csv", "", tmmname)
     
     
     if(ncol(data_f)!=length(data_list_tmm$f)){stop("Mismatch between number of samples and number of scaling factors.")

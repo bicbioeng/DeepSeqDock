@@ -51,7 +51,7 @@ if args.meta:
     myHarmonizerdict['metadata'] = pd.read_csv(Path(args.meta), index_col=0).to_json()
 
 # import normalization and scaling data and metadata
-
+print(Path(args.preprocessing).parent)
 moi = glob.glob((Path(args.preprocessing).parent / ('*-raw_medians.json')).as_posix())[0]
 with open(moi, "r") as handle:
     myHarmonizerdict['models']['raw_medians'] = json.load(handle)
@@ -60,9 +60,12 @@ if Path(args.preprocessing).suffix == '.txt':
     with open(Path(args.preprocessing).as_posix()) as handle:
         myHarmonizerdict['models']['preprocessing'] = handle.read()
 
-else:
+elif Path(args.preprocessing).suffix == '.json':
     with open(Path(args.preprocessing).as_posix(), "r") as handle:
         myHarmonizerdict['models']['preprocessing'] = json.load(handle)
+
+elif Path(args.preprocessing).suffix == '.none':
+    myHarmonizerdict['models']['preprocessing'] = None
 
 with open(Path(args.scaling).as_posix(), "r") as handle:
     myHarmonizerdict['models']['scaling'] = json.load(handle)

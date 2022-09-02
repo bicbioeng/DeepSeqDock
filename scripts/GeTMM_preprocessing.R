@@ -324,7 +324,13 @@ g_tmm_preprocessing <- function(file, gene_length=NULL, referenceSample=NULL){
 
     data_list_tmm_g = calcNormFactors.modified(data_fg, refColumn = 1, factor_scaling = refs$factor_scaling_g)
 
-    tmmname = sub("\\.csv", "", basename(file))
+    # Get root name with or without preprocessing metadata
+    tmmname = basename(file)
+
+    tmmname = sub("-[[:alpha:]]{2,4}_(none|global|feature)\\.csv", "", tmmname)
+    tmmname = sub("preprocess_\\d{4}_\\d{2}_\\d{2}-\\d{2}_\\d{2}_\\d{2}_", "", tmmname)
+
+    tmmname = sub("\\.csv", "", tmmname)
 
     if(ncol(data_fg)!=length(data_list_tmm_g$f)){stop("Mismatch between number of samples and number of scaling factors.")
     } else {

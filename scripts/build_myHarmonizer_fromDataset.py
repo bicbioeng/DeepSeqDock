@@ -70,6 +70,10 @@ os.system(('python normalize_scale.py -d "' +
 
 # Run autoencoder_optimization
 
+# Patch
+if args.preprocessing_method == 'None':
+    args.preprocessing_method = 'none'
+
 normalized_train_data = (Path(args.output_directory) / "Data Representations" / 'Normalized' / ('preprocess_' + dt) /
                          ('preprocess_' + dt + '_train-' + args.preprocessing_method + "_" + args.scaling_method.lower()
                           + ".csv")).as_posix()
@@ -101,13 +105,17 @@ os.system(('python autoencoder_optimization.py -d "' +
 
 # Run build_myHarmonizer
 
-if args.preprocessing_method in ['None', 'LS', 'TPM', 'QT', 'RLE']:
+if args.preprocessing_method in ['LS', 'TPM', 'QT', 'RLE']:
     preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                           ('preprocess_' + dt + '-' + args.preprocessing_method + '_none_model.json')).as_posix()
 
 elif args.preprocessing_method in ['VST', 'GeVST', 'TMM', 'GeTMM']:
     preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                           (args.preprocessing_method + "_parameters.txt")).as_posix()
+
+elif args.preprocessing_method == 'none':
+    preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
+                          ("none.none")).as_posix()
 
 else:
     raise KeyError(args.preprocessing_method + ' is not one of None, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM')
