@@ -40,11 +40,11 @@ parser.add_argument('-p', '--preprocessing_method', type=str, nargs="+",
                     help='List of one or more preprocessing methods to run. Defaults to QT method. '
                          'For all methods, values above the 99th percentile (sample-wise) are capped, a pseudo count of 1'
                          'is added, and gene features with 0 expression across the train dataset are removed.'
-                         ' Options are: All, None, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM',
+                         ' Options are: all, none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM',
                     default=['QT'])
 parser.add_argument('-s', '--scaling_method', type=str, nargs="+",
                     help='List of one or more scaling methods to run. Defaults to feature scaling methods.'
-                         ' Options are: All, None, Global, Feature',
+                         ' Options are: all, none, Global, Feature',
                     default=['Feature'])
 parser.add_argument('--plots', type=str, nargs="+",
                     help='Plot random gene-wise and feature-wise distributions. Options are True for random list of 5 genes,'
@@ -94,11 +94,11 @@ def sklearn_to_json(scaler, file):
 
 
 ## Set up vectors for 'all' preprocessing, scaling
-if 'All' in args.preprocessing_method:
-    args.preprocessing_method = ['None', 'LS', 'TPM', 'QT', 'RLE', 'VST', 'GeVST', 'TMM', 'GeTMM']
+if 'all' in args.preprocessing_method:
+    args.preprocessing_method = ['none', 'LS', 'TPM', 'QT', 'RLE', 'VST', 'GeVST', 'TMM', 'GeTMM']
 
-if 'All' in args.scaling_method:
-    args.scaling_method = ['None', 'Global', 'Feature']
+if 'all' in args.scaling_method:
+    args.scaling_method = ['none', 'Global', 'Feature']
 
 ## Make run folder
 
@@ -106,6 +106,12 @@ if args.datetime:
     run_id = ("preprocess_" + args.datetime)
 else:
     run_id = time.strftime("preprocess_%Y_%m_%d-%H_%M_%S")
+    
+if args.output_directory == 'output':
+    args.output_directory = (Path.cwd() / 'output').as_posix()
+    
+if args.gene_length == 'supporting/genelength.csv':
+    args.gene_length = (Path(__file__).parents[1] / 'supporting' / 'genelength.csv').as_posix()
 
 dataset_path = Path(args.output_directory) / 'Data Representations' / 'Normalized' / run_id
 if ~os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
@@ -131,7 +137,7 @@ if args.test_data:
     for t in args.test_data:
         test_data[t] = pd.read_csv(Path(t), index_col=0).astype('float32')
 
-gene_length = pd.read_csv((Path.cwd().parents[0] / 'supporting' / 'genelength.csv'), index_col=0).iloc[:, 0]
+gene_length = pd.read_csv((Path(__file__).parents[1] / 'supporting' / 'genelength.csv'), index_col=0).iloc[:, 0]
 
 seed = randint(1, 100)
 
@@ -267,7 +273,7 @@ if 'Feature' in args.scaling_method:
     print('None preprocessing feature scaling complete.')
 
 ## Run all preprocessing methods
-prep_method = [value for value in args.preprocessing_method if value != "None"]
+prep_method = [value for value in args.preprocessing_method if value != "none"]
 
 for p in prep_method:
     ## Preprocessing
@@ -345,9 +351,10 @@ for p in prep_method:
             else:
                 poi = trainz_path
 
-            os.system(('./VST_preprocessing.R -d "' + poi +
-                       '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                       ' -p "' + str(model_path) + '"' +
+            os.system((Path(__file__).parent.resolve().as_posix() + 
+                       '/VST_preprocessing.R -d "' + poi +
+                       '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                       ' -p "' + model_path.as_posix() + '"' +
                        ' --datetime ' + run_id))
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
@@ -366,11 +373,12 @@ for p in prep_method:
             else:
                 poi = trainz_path
 
-            os.system(('./GeVST_preprocessing.R -d "' + poi
-                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                       ' -p "' + str(model_path)
-                       + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
-                      ' --datetime ' + run_id)
+            os.system((Path(__file__).parent.resolve().as_posix()
+                       + '/GeVST_preprocessing.R -d "' + poi
+                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                       ' -p "' + model_path.as_posix()
+                       + '" -g ' + args.gene_length +
+                      ' --datetime ' + run_id))
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
@@ -387,10 +395,11 @@ for p in prep_method:
             else:
                 poi = trainz_path
 
-            os.system(('./TMM_preprocessing.R -d "' + poi
-                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                       ' -p "' + str(model_path) + '"') +
-                      ' --datetime ' + run_id)
+            os.system((Path(__file__).parent.resolve().as_posix() 
+                       + '/TMM_preprocessing.R -d "' + poi
+                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                       ' -p "' + model_path.as_posix() + '"' +
+                      ' --datetime ' + run_id))
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
@@ -407,11 +416,12 @@ for p in prep_method:
             else:
                 poi = trainz_path
 
-            os.system(('./GeTMM_preprocessing.R -d "' + poi
-                       + '" -o "' + str(dataset_path) + '" -r ' + run_id +
-                       ' -p "' + str(model_path)
-                       + '" -g ' + str(Path.cwd().parents[0]) + "/" + args.gene_length) +
-                      ' --datetime ' + run_id)
+            os.system((Path(__file__).parent.resolve().as_posix() 
+                       + '/GeTMM_preprocessing.R -d "' + poi
+                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                       ' -p "' + model_path.as_posix()
+                       + '" -g ' + args.gene_length +
+                      ' --datetime ' + run_id))
 
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
@@ -421,7 +431,7 @@ for p in prep_method:
                     test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
                                                index_col=0)
 
-        case 'None':
+        case 'none':
             train_prep = pd.read_csv(dataset_path / (run_id + '_train-none_none.csv'), index_col=0)
 
 

@@ -19,6 +19,9 @@ parser.add_argument('-o', '--output_directory', type=str,
 
 args = parser.parse_args()
 
+if args.output_directory == 'output':
+    args.output_directory = (Path.cwd() / 'output').as_posix()
+
 # Get datetime for runs
 dt = time.strftime("%Y_%m_%d-%H_%M_%S")
 print("myHarmonizer run: myHarmonizer-" + dt)
@@ -48,7 +51,7 @@ if norm in ['LS', 'TPM', 'QT', 'RLE']:
 
 elif norm in ['VST', 'GeVST', 'TMM', 'GeTMM']:
     preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / prep_run_id /
-                          (args.preprcessing_method + "_parameters.txt")).as_posix()
+                          (norm + "_parameters.txt")).as_posix()
 
 elif norm == 'none':
     preprocessing_path = (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / prep_run_id /
@@ -69,7 +72,7 @@ else:
 doi = glob.glob((Path(args.output_directory) / 'Data Representations' / 'Autoencoder' /
                  args.autoencoder / (args.autoencoder + "*.csv")).as_posix())
 if args.meta:
-    os.system(('python build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / args.autoencoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path +
@@ -77,7 +80,7 @@ if args.meta:
                 dt + ' -d "' +
                '" "'.join(doi) + '"'))
 else:
-    os.system(('python build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / args.autoencoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path + '" --datetime ' +

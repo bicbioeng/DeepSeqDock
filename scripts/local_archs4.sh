@@ -8,11 +8,8 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 usage() {
   cat <<EOF # remove the space between << and EOF, this is due to web plugin issue
 Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] [-d <path/to/fastq/folder>]
-
 This script runs a local version of the ARCHS4 pipeline.
-
 Available options:
-
 -h, --help      Print this help and exit
 -v, --verbose   Print script debug info
 -d, --dir       Specify the directory in which FASTQ directories
@@ -24,7 +21,6 @@ Available options:
                 true.
 -i, --getindex  Get kallisto index from online Archs4 project. Only necessary once.
                 Defaults to false.
-
 EOF
   exit
 }
@@ -55,7 +51,7 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  output="$script_dir/output"
+  output="$PWD/output"
   compress=true
   getindex=false
 
@@ -129,24 +125,24 @@ for file in "${dir-}/"*; do
 
         # Unzip fastq files if necessary
         for f in "$file"/*.fastq*; do
-          if (file "$f" | grep -q gzip ) ; then
+          if ( gzip -t "$f" ) ; then
             gunzip "$f"
           fi
         done
 
         # Fastqc
-        source fastqc.sh
+        source "$script_dir"/fastqc.sh
 
         # Kallisto
-        source kallisto.sh
+        source "$script_dir"/kallisto.sh
 
         # Map to genes
-        Rscript mapgenes.R "${output-}/Quality Assessment/kallisto/$filename" "human_mapping.rda"
+        Rscript "$script_dir"/mapgenes.R "${output-}/Quality Assessment/kallisto/$filename" "human_mapping.rda"
 
         # Zip fastq
         if ( "${compress-}" = true ) ; then
           echo
-          msg "Zipping $filename"
+          msg "Zipping $filename"/
           msg "-----------------------------------"
           gzip "$file"/*.fastq
         fi
@@ -154,6 +150,6 @@ for file in "${dir-}/"*; do
 done
 
 # Aggregate all the output files
-Rscript consolidatesamples.R "${output-}/Quality Assessment/kallisto" "${output-}"
+Rscript "$script_dir"/consolidatesamples.R "${output-}/Quality Assessment/kallisto" "${output-}"
 
 # parentdir="$(dirname "$dir")"

@@ -56,6 +56,10 @@ parser.add_argument('-p', '--plots', type=str,
 
 args = parser.parse_args()
 
+
+if args.output_directory == 'output':
+    args.output_directory = (Path.cwd() / 'output').as_posix()
+    
 ## Make run folder
 run_id = time.strftime("eval_%Y_%m_%d-%H_%M_%S")
 qc_path =  Path(args.output_directory) / 'Quality Assessment' / 'Evaluation' / run_id

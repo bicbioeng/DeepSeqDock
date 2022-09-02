@@ -22,10 +22,10 @@ parser.add_argument('-g', '--gene_length', type=str,
                          ' Default is effective gene lengths from an outside sample mapped by Kallisto.',
                     default='supporting/genelength.csv')
 parser.add_argument('-p', '--preprocessing_method', type=str,
-                    help='One preprocessing method to run. Defaults to all methods. '
+                    help='One preprocessing method to run. Defaults to QT. '
                          'For all methods, values above the 99th percentile (sample-wise) are capped, a pseudo count of 1'
                          'is added, and gene features with 0 expression across the train dataset are removed.'
-                         ' Options are: None, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM',
+                         ' Options are: none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM',
                     default='QT')
 parser.add_argument('-s', '--scaling_method', type=str,
                     help='One scaling methods to run. Defaults to feature scaling method.'
@@ -57,9 +57,15 @@ if args.test_data:
 else:
     dataset = ('" -t "' + args.valid_data)
 
-# Run normalize_scale
+# Run normalize_scale3
 
-os.system(('python normalize_scale.py -d "' +
+if args.output_directory == "output":
+    args.output_directory = (Path.cwd() / 'output').as_posix()
+    
+if args.gene_length == "supporting/genelength.csv":
+    args.gene_length == (Path(__file__).parents[1] / 'supporting' / 'genelength.csv').as_posix()
+
+os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/normalize_scale.py -d "' +
            args.train_data + dataset + '" -o "' +
            args.output_directory + '" -g ' +
            args.gene_length + ' -p ' +
@@ -69,10 +75,6 @@ os.system(('python normalize_scale.py -d "' +
            dt))
 
 # Run autoencoder_optimization
-
-# Patch
-if args.preprocessing_method == 'None':
-    args.preprocessing_method = 'none'
 
 normalized_train_data = (Path(args.output_directory) / "Data Representations" / 'Normalized' / ('preprocess_' + dt) /
                          ('preprocess_' + dt + '_train-' + args.preprocessing_method + "_" + args.scaling_method.lower()
@@ -94,7 +96,7 @@ if args.test_data:
 else:
     dataset1 = ('" -v "' + normalized_valid_data)
 
-os.system(('python autoencoder_optimization.py -d "' +
+os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
@@ -118,7 +120,7 @@ elif args.preprocessing_method == 'none':
                           ("none.none")).as_posix()
 
 else:
-    raise KeyError(args.preprocessing_method + ' is not one of None, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM')
+    raise KeyError(args.preprocessing_method + ' is not one of none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM')
 
 
 latent_train_data = (Path(args.output_directory) / "Data Representations" / 'Autoencoder' / ('autoencoder_' + dt) /
@@ -141,7 +143,7 @@ else:
 
 
 if args.meta:
-    os.system(('python build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / (
                            'autoencoder_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
@@ -151,7 +153,7 @@ if args.meta:
                dt + ' -d "' + latent_train_data + dataset2 + '"'
                ))
 else:
-    os.system(('python build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / (
                            'autoencoder_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +

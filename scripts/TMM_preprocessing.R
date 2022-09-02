@@ -1,4 +1,4 @@
-#!/home/mhoffman/miniconda3/envs/GBMMC/bin/Rscript
+#!/opt/conda/envs/GBMMC/bin/Rscript
 
 suppressPackageStartupMessages(library("argparse", warn.conflicts = FALSE, quietly = TRUE))
 suppressPackageStartupMessages(library("edgeR"))
