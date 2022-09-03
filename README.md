@@ -12,3 +12,5 @@ The output from the DeepSeqDock framework include 1) a myHarmonizer json object 
 
 This framework also provides a local implementation of the pipeline used to preprocess the [ArchS4](https://maayanlab.cloud/archs4/) dataset, to facilitate integration of user knowledge bases with data from the one of the massive mining projects.
 
+![alt text](https://github.com/bicbioeng/DeepSeqDock/blob/main/Fig1.png?raw=true)
+
