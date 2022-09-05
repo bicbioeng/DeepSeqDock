@@ -12,5 +12,28 @@ The output from the DeepSeqDock framework include 1) a myHarmonizer json object 
 
 This framework also provides a local implementation of the pipeline used to preprocess the [ArchS4](https://maayanlab.cloud/archs4/) dataset, to facilitate integration of user knowledge bases with data from the one of the massive mining projects.
 
-![alt text](https://github.com/bicbioeng/DeepSeqDock/blob/main/Fig1.png?raw=true)
 
+<img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1.png?raw=true" alt="Fig1" width="800"/>
+
+## Installation
+
+The most straightforward implemenatation of DeepSeqDock is the Dockerized version, which is available at:
+
+<span style="color:red">Docker container download and setup information here</span>
+
+While the Docker version of the code is the easiest implementation, this version may not utilize GPU resources, which are particularly valuable for the autoencoder optimization step. The framework has also been made available on GitHub with a standard conda environment .yml file, which can be used to create a conda environment with the packages necessary to run the DeepSeqDock framework. 
+
+For this approach, first make sure that a conda package manager is [installed](https://docs.conda.io/en/latest/miniconda.html) and the DeepSeqDock GitHub repository has been [cloned](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forked](https://docs.github.com/en/get-started/quickstart/fork-a-repo) locally if you would like to make changes. This approach has only been tested in Linux environments, and may require changes to be functional in Mac or Windows OS. 
+
+To install the conda environment from the [terminal](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file):
+
+```shell
+conda env create -f environment.yml
+```
+and then activate the environment before running the modules.
+
+```shell
+conda activate DeepSeqDock
+```
+
+<span style="color:red">Mention the .R scripts header here</span>
