@@ -114,13 +114,13 @@ if args.gene_length == 'supporting/genelength.csv':
     args.gene_length = (Path(__file__).parents[1] / 'supporting' / 'genelength.csv').as_posix()
 
 dataset_path = Path(args.output_directory) / 'Data Representations' / 'Normalized' / run_id
-if ~os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
+if not os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
 
 model_path = Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / run_id
-if ~os.path.exists(model_path): model_path.mkdir(parents=True)
+if not os.path.exists(model_path): model_path.mkdir(parents=True)
 
 qc_path = Path(args.output_directory) / 'Quality Assessment' / 'Normalized' / run_id
-if ~os.path.exists(qc_path): qc_path.mkdir(parents=True)
+if not os.path.exists(qc_path): qc_path.mkdir(parents=True)
 
 print("Preprocessing Run: ", run_id)
 

@@ -184,13 +184,13 @@ else:
     args.output_directory = Path(args.output_directory)
 
 modelpath = args.output_directory / 'Raw Python Package' / 'Autoencoder' / run_id
-if ~os.path.exists(modelpath): modelpath.mkdir(parents=True)
+if not os.path.exists(modelpath): modelpath.mkdir(parents=True)
 
 qc_path = args.output_directory / 'Quality Assessment' / 'Autoencoder' / run_id
-if ~os.path.exists(qc_path): qc_path.mkdir(parents=True)
+if not os.path.exists(qc_path): qc_path.mkdir(parents=True)
 
 dataset_path = args.output_directory / 'Data Representations' / 'Autoencoder' / run_id
-if ~os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
+if not os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
 
 print("Autoencoder Run: ", run_id)
 

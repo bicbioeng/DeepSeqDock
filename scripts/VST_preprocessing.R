@@ -1,4 +1,4 @@
-#!/opt/conda/envs/GBMMC/bin/Rscript
+#!/opt/conda/envs/DeepSeqDock/bin/Rscript
 
 suppressPackageStartupMessages(library("argparse", warn.conflicts = FALSE, quietly = TRUE))
 suppressPackageStartupMessages(library("DESeq2"))

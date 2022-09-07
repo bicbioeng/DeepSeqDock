@@ -137,7 +137,7 @@ for file in "${dir-}/"*; do
         source "$script_dir"/kallisto.sh
 
         # Map to genes
-        Rscript "$script_dir"/mapgenes.R "${output-}/Quality Assessment/kallisto/$filename" "human_mapping.rda"
+        Rscript "$script_dir"/mapgenes.R "${output-}/Quality Assessment/kallisto/$filename" "$script_dir/human_mapping.rda"
 
         # Zip fastq
         if ( "${compress-}" = true ) ; then
