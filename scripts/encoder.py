@@ -218,7 +218,7 @@ def build_autoencoder(train, valid, config):
     enc.add(Dropout(config['dropout_rate'], input_shape=(train.shape[1],)))
     if config['noise']:
         # enc.add(centered_gaussian_noise_layer)
-        enc.add(CenteredGaussianNoise(center=0.5, stddev=config['noise_std']))
+        enc.add(CenteredGaussianNoise(center=0, stddev=config['noise_std']))
 
     enc_list = []
     for i in range(config['nlayers']):
