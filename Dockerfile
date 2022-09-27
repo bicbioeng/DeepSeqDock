@@ -1,39 +1,40 @@
-FROM jupyter/minimal-notebook:ubuntu-20.04
+FROM ubuntu:20.04
 
 WORKDIR /app
 
 USER root
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential r-base r-cran-randomforest
+RUN apt-get update
 
 RUN apt-get install -y wget
+# update indices
+RUN apt update -qq
+# install two helper packages we need
+RUN apt install -y --no-install-recommends software-properties-common dirmngr
+# add the signing key (by Michael Rutter) for these repos
+# To verify key, run gpg --show-keys /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc 
+# Fingerprint: E298A3A825C0D65DFD57CBB651716619E084DAB9
+RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+# add the R 4.0 repo from CRAN -- adjust 'focal' to 'groovy' or 'bionic' as needed
+RUN add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
 
-RUN apt-get install fastqc
+RUN apt-get -y install fastqc
 
-COPY GBMMC.yml /app/GBMMC.yml
+COPY DeepSeqDock.yml /app/DeepSeqDock.yml
 
-RUN conda env create -f GBMMC.yml python=3.10
+RUN conda env create -f DeepSeqDock.yml python=3.10
 
-SHELL ["conda","run","-n","GBMMC","/bin/bash","-c"]
-
-RUN python -m ipykernel install --name kernel_one
+RUN python -m ipykernel install --user --name DeepSeqDock
 
 SHELL ["/bin/bash","-c"]
 
-RUN conda init
-
-RUN echo 'conda activate GBMMC' >> ~/.bashrc
-
-#RUN apt-get install -y gdebi-core
-
-#RUN wget https://download1.rstudio.org/desktop/bionic/amd64/rstudio-2022.07.1-554-amd64.deb
-
-#RUN gdebi rstudio-2022.07.1-554-amd64.deb
-
-#RUN Rscript -e "install.packages('plyr', repos='http://cran.us.r-project.org', dependencies = TRUE)"
-#RUN Rscript -e "install.packages('BiocManager')"
-#RUN Rscript -e "BiocManager::install('edgeR')"
-#RUN Rscript -e "BiocManager::install('DESeq2')"
-#RUN Rscript -e "install.packages('argparse')"
+RUN Rscript -e "install.packages('BiocManager', repos='http://cran.us.r-project.org')"
+RUN Rscript -e "BiocManager::install('edgeR')"
+RUN Rscript -e "BiocManager::install('DESeq2')"
+RUN Rscript -e "install.packages('argparse',repos='http://cran.us.r-project.org')"
+RUN Rscript -e "install.packages('plyr',repos='http://cran.us.r-project.org', dependencies = TRUE)"
 
 COPY . .
+
+ENTRYPOINT ["conda", "activate", "DeepSeqDock"]
+

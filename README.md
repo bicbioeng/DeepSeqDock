@@ -19,7 +19,14 @@ This framework also provides a local implementation of the pipeline used to prep
 
 ### Docker
 
-The most straightforward implemenatation of DeepSeqDock is the Dockerized version, which is available at:
+The most straightforward implemenatation of DeepSeqDock is the Dockerized version
+```
+docker run -d --rm --name deepseqdock us-central1-docker.pkg.dev/nosi-usd-biofilm/nosi-usd-biofilm-arti/deepseqdock
+```
+Parameters:
+ - -d: detach mode
+ - --rm: automatic clean container when container stop
+ - --name : specify container name
 
 <span style="color:red">Docker container download and setup information here</span>
 Include docker instance setup (geared for someone only a little familiar with Docker) - where are we going to store this Docker image?
