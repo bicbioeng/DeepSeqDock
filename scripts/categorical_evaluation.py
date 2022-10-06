@@ -40,7 +40,7 @@ parser.add_argument('-d', '--train', type=str,
 
 parser.add_argument('-c', '--characteristic', type=str,
                     help='Name of metadata column with discrete (categorical) metadata of interest. Defaults to the second '
-                         'column of the metadata csv.', default=[])
+                    'column of the metadata csv.', default=[])
 
 parser.add_argument('-o', '--output_directory', type=str,
                     help='Directory to which output will be written', default='output')
