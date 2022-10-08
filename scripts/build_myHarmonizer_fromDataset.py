@@ -150,7 +150,7 @@ if args.meta:
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                ('preprocess_' + dt + '-' + args.preprocessing_method + '_' + args.scaling_method.lower() + '_model.json')).as_posix() +
                '" -m "' + args.meta + '" --datetime ' +
-               dt + ' -d "' + latent_train_data + dataset2 + '"'
+               dt + ' -d "' + latent_train_data + dataset2 + '" -o "' + args.output_directory + '"'
                ))
 else:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
@@ -160,7 +160,7 @@ else:
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                 ('preprocess_' + dt + '-' + args.preprocessing_method + '_' + args.scaling_method.lower() + '_model.json')).as_posix() +
                '" --datetime ' +
-               dt + ' -d "' + latent_train_data + dataset2 + '"'))
+               dt + ' -d "' + latent_train_data + dataset2 + '" -o "' + args.output_directory + '"'))
 
 print("\n \033[1;32m myHarmonizer run: myHarmonizer-" + dt)
 print("")
