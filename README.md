@@ -70,7 +70,7 @@ It may also be necessary to install wget, though it comes pre-installed in most 
 
 This function will run normalization, scaling, and autoencoder optimization steps and assemble a myHarmonizer object from the result. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation and test datasets should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. A sample metadata file with samples as rows and categorical features as columns may also be supplied. Default normalization is QT and scaling is feature min-max scaling.
 
-If the user does not supply their own gene length file and intends to use one of the normalization methods that depends on gene length, only the HUGO official gene symbol may be used to denote features. Other feature IDs will not map well to the gene length file. 
+If the user does not supply their own gene length file and intends to use one of the normalization methods that depends on gene length, only the HGNC official gene symbol may be used to denote features. Other feature IDs will not map well to the gene length file. 
 
 Help documentation is available at:
 
@@ -113,7 +113,7 @@ python DeepSeqDock/scripts/normalize_scale.py --help
 
 For normalization, it is possible to choose one or more of ten options (separated by spaces): all, none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM. Where LS is library scale, TPM is transcript per kilobase million, QT is quantile, RLE is relative log expression, TMM is trimmed mean of M values, GeTMM is gene length corrected trimmed mean of M values, VST is variance stabilizing transformation, and GeVST is gene length corrected variance stabilized transformation. The default value is QT. 
 
-If chosing one of TPM, GeVST, or GeTMM, a csv file with the gene transcript length may be provided for the -g, --gene_length argument, otherwise, the default file will be used and features that are not mapped will be excluded. 
+If chosing one of TPM, GeVST, or GeTMM, a csv file with the gene transcript length may be provided for the -g, --gene_length argument, otherwise, the default file will be used and features that are not mapped will be excluded. In this case, only the HGNC official gene symbol may be used to denote features. Other feature IDs will not map well to the gene length file. 
 
 For scaling, it is possible to chose one of four options: all, none, Global, Feature. All scaling options except none are min-max scaling. The global or feature refers to whether the minimum and maximum values are defined by gene features (Feature) or across the dataset (Global). The default value is Feature.
 
