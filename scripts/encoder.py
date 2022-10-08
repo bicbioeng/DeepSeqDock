@@ -294,9 +294,6 @@ def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir):
     metricsdict = {
         'valid loss': valid_score,
         'train loss': train_score,
-        'monotonicity': monotonicity,
-        'SEM metric': sems,
-        'expected behavior': expected_behavior
     }
 
 
