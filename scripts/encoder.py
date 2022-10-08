@@ -17,9 +17,6 @@ import logging
 import pandas as pd
 import numpy as np
 
-import neptune.new as neptune
-from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-
 class CenteredGaussianNoise(tf.keras.layers.Layer):
     """Apply additive non zero-centered Gaussian noise.
 
@@ -242,7 +239,7 @@ def build_autoencoder(train, valid, config):
 
     return tf.keras.models.Sequential([enc, dec])
 
-def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir, neptuneapi):
+def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir):
     x_train = pd.read_csv(datapath / (datarun + '-train' + dataprefix + ".csv"),
                           index_col=0).astype(
         'float32')
@@ -264,19 +261,10 @@ def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir, 
     model.compile(loss=tf.keras.losses.mean_squared_error,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
 
-    nrun = neptune.init(project='mariah.hoffman/ModelChecker-SEQC-Autoencoder002', #mode="debug")
-                        api_token=neptuneapi)
-
-    nrun["config"] = config
-    nrun["directory/data"] = datapath
-    nrun["directory/output"] = outputdir
-
-    neptune_cbk = NeptuneCallback(run=nrun, base_namespace='metrics')
-
     # assume power scheduler
     lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
         decayed_learning_rate(lr0=config['lr'], s=config['s']))
-    callbacks = [lr_scheduler, neptune_cbk]
+    callbacks = [lr_scheduler]
 
 
     history = model.fit(train, train,
@@ -311,8 +299,6 @@ def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir, 
         'expected behavior': expected_behavior
     }
 
-    nrun["metrics/validmetrics"] = metricsdict
-    nrun.stop()
 
     model.save(Path(outputdir) / "model")
 
