@@ -70,6 +70,8 @@ It may also be necessary to install wget, though it comes pre-installed in most 
 
 This function will run normalization, scaling, and autoencoder optimization steps and assemble a myHarmonizer object from the result. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation and test datasets should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. A sample metadata file with samples as rows and categorical features as columns may also be supplied. Default normalization is QT and scaling is feature min-max scaling.
 
+If the user does not supply their own gene length file and intends to use one of the normalization methods that depends on gene length, only the HUGO official gene symbol may be used to denote features. Other feature IDs will not map well to the gene length file. 
+
 Help documentation is available at:
 
 ```shell
