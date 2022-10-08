@@ -15,6 +15,8 @@ This framework also provides a local implementation of the pipeline used to prep
 
 <img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1.png?raw=true" alt="Fig1" width="800"/>
 
+As with all deep learning approaches, the more clean data available, the stronger the model will be. The framework was tested on knowledge bases of hundreds to over a thousand datasets. This approach has not been validated for small knowledge bases (less than 100 samples). 
+
 ## Installation
 
 ### Docker
@@ -27,10 +29,6 @@ Parameters:
  - -d: detach mode
  - --rm: automatic clean container when container stop
  - --name : specify container name
-
-<span style="color:red">Docker container download and setup information here</span>
-Include docker instance setup (geared for someone only a little familiar with Docker) - where are we going to store this Docker image?
-Include linking output folder to user output folder of choice.
 
 ### Conda environment
 
