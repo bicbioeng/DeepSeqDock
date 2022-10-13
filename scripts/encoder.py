@@ -293,10 +293,9 @@ def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir):
 
     metricsdict = {
         'valid loss': valid_score,
-        'train loss': train_score,
+        'train loss': train_score
     }
-
-
+    
     model.save(Path(outputdir) / "model")
 
     return history, model, features

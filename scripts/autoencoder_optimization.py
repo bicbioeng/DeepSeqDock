@@ -86,29 +86,27 @@ class KerasWorker(Worker):
 
         model.compile(loss=tf.keras.losses.mean_squared_error,
                       optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
-
-        match self.scheduler:
-            case '1cycle':
-                onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * int(budget),
+        
+        if self.scheduler == '1cycle':
+            onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * int(budget),
                                                       max_rate=config['lr'])
-                callbacks = [onecycle_cb]
-
-            case '1cycle2':
-                lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-                    ec.onecycle_lr(config['lr'], int(budget), 10, model=model))
-                momentum_scheduler = ec.OneCycleMomentumCallback(int(budget), 10)
-                callbacks = [lr_scheduler, momentum_scheduler]
-
-            case 'exponential':
-                lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-                    ec.exponential_decay(lr0=config['lr'], s=config['s']))
-                callbacks = [lr_scheduler]
-
-            case 'power':
-                lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-                    ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
-                callbacks = [lr_scheduler]
-
+            callbacks = [onecycle_cb]
+            
+        elif self.scheduler == '1cycle2':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.onecycle_lr(config['lr'], int(budget), 10, model=model))
+            momentum_scheduler = ec.OneCycleMomentumCallback(int(budget), 10)
+            callbacks = [lr_scheduler, momentum_scheduler]
+            
+        elif self.scheduler == 'exponential':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.exponential_decay(lr0=config['lr'], s=config['s']))
+            callbacks = [lr_scheduler]
+            
+        elif self.scheduler == 'power':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
+            callbacks = [lr_scheduler]
 
         model.fit(train, train,
                   batch_size=config['batchsize'],
@@ -290,26 +288,26 @@ elif args.debug == "False":
 
     model.compile(loss=tf.keras.losses.mean_squared_error,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
-
-    match args.scheduler:
-        case '1cycle':
-            onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * args.max_budget,
+    
+    if args.scheduler == '1cycle':
+        onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * args.max_budget,
                                           max_rate=config['lr'])
-            callbacks = [onecycle_cb]
+        callbacks = [onecycle_cb]
+        
+    elif args.scheduler == '1cycle2':
+        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.onecycle_lr(config['lr'], args.max_budget, 10, model=model))
+        momentum_scheduler = ec.OneCycleMomentumCallback(args.max_budget, 10)
+        callbacks = [lr_scheduler, momentum_scheduler]
+        
+    elif args.scheduler == 'exponential':
+        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.exponential_decay(lr0=config['lr'], s=config['s']))
+        callbacks = [lr_scheduler]
+        
+    elif args.scheduler == 'power':
+        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+        ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
+        callbacks = [lr_scheduler]
 
-        case '1cycle2':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.onecycle_lr(config['lr'], args.max_budget, 10, model=model))
-            momentum_scheduler = ec.OneCycleMomentumCallback(args.max_budget, 10)
-            callbacks = [lr_scheduler, momentum_scheduler]
-
-        case 'exponential':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.exponential_decay(lr0=config['lr'], s=config['s']))
-            callbacks = [lr_scheduler]
-
-        case 'power':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-                ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
-            callbacks = [lr_scheduler]
 
     history = model.fit(train, train,
                         batch_size=config['batchsize'],
