@@ -295,7 +295,7 @@ def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir):
         'valid loss': valid_score,
         'train loss': train_score
     }
-
+    
     model.save(Path(outputdir) / "model")
 
     return history, model, features
