@@ -69,6 +69,8 @@ def sklearn_to_json(scaler, file):
         it[name] = type(p).__name__
         if type(p) == np.ndarray:
             model['init_params'][name] = p.tolist()
+        elif isinstance(p, np.floating):
+            model['init_params'][name] = float(p)
         elif type(p) == pd.core.series.Series:
             model['init_params'][name] = p.to_list()
             ii[name] = p.index.to_list()
@@ -83,6 +85,8 @@ def sklearn_to_json(scaler, file):
 
         if type(attrb) == np.ndarray:
             mp[p] = attrb.tolist()
+        elif isinstance(attrb, np.floating):
+            mp[p] = float(attrb)
         elif type(attrb) == pd.core.series.Series:
             mp[p] = attrb.to_list()
             mi[p] = attrb.index.to_list()
@@ -276,164 +280,169 @@ if 'Feature' in args.scaling_method:
 prep_method = [value for value in args.preprocessing_method if value != "none"]
 
 for p in prep_method:
-    ## Preprocessing
-    match p:
-        case 'LS':
-            prep = pp.LSPreprocessing()
+    
+    if p == 'LS':
+        prep = pp.LSPreprocessing()
 
-            train_prep = prep.fit_transform(trainz)
-            train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
+        train_prep = prep.fit_transform(trainz)
+        train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
 
-            ## Save model
-            sklearn_to_json(prep, (model_path / (run_id + '-LS_none_model.json')))
-            # with open((model_path / (run_id + '-LS_none_model.p')), "wb") as handle:
-            #     pickle.dump(prep, handle, protocol=4)
+        ## Save model
+        sklearn_to_json(prep, (model_path / (run_id + '-LS_none_model.json')))
+        # with open((model_path / (run_id + '-LS_none_model.p')), "wb") as handle:
+        #     pickle.dump(prep, handle, protocol=4)
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = prep.transform(testz[t])
-                    test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
-        case 'TPM':
-            prep = pp.TPMPreprocessing(genelength=gene_length)
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = prep.transform(testz[t])
+                test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
+    
+    elif p == 'TPM':
+        prep = pp.TPMPreprocessing(genelength=gene_length)
 
-            train_prep = prep.fit_transform(trainz)
-            train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
+        train_prep = prep.fit_transform(trainz)
+        train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
 
-            ## Save model
-            sklearn_to_json(prep, (model_path / (run_id + '-TPM_none_model.json')))
-            # with open((model_path / (run_id + '-TPM_none_model.p')), "wb") as handle:
-            #     pickle.dump(prep, handle, protocol=4)
+        ## Save model
+        sklearn_to_json(prep, (model_path / (run_id + '-TPM_none_model.json')))
+        # with open((model_path / (run_id + '-TPM_none_model.p')), "wb") as handle:
+        #     pickle.dump(prep, handle, protocol=4)
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = prep.transform(testz[t])
-                    test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
-        case 'QT':
-            prep = pp.QuantilePreprocessing()
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = prep.transform(testz[t])
+                test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
+                
+    elif p == 'QT':
+        prep = pp.QuantilePreprocessing()
 
-            train_prep = prep.fit_transform(trainz)
-            train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
+        train_prep = prep.fit_transform(trainz)
+        train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
 
-            ## Save model
-            sklearn_to_json(prep, (model_path / (run_id + '-QT_none_model.json')))
-            # with open((model_path / (run_id + '-QT_none_model.p')), "wb") as handle:
-            #     pickle.dump(prep, handle, protocol=4)
+        ## Save model
+        sklearn_to_json(prep, (model_path / (run_id + '-QT_none_model.json')))
+        # with open((model_path / (run_id + '-QT_none_model.p')), "wb") as handle:
+        #     pickle.dump(prep, handle, protocol=4)
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = prep.transform(testz[t])
-                    test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
-        case 'RLE':
-            prep = pp.RLEPreprocessing()
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = prep.transform(testz[t])
+                test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
+                
+                
+    elif p == 'RLE':
+        prep = pp.RLEPreprocessing()
 
-            train_prep = prep.fit_transform(trainz)
-            train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
+        train_prep = prep.fit_transform(trainz)
+        train_prep.to_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'))
 
-            ## Save model
-            sklearn_to_json(prep, (model_path / (run_id + '-RLE_none_model.json')))
-            # with open((model_path / (run_id + '-RLE_none_model.p')), "wb") as handle:
-            #     pickle.dump(prep, handle, protocol=4)
+        ## Save model
+        sklearn_to_json(prep, (model_path / (run_id + '-RLE_none_model.json')))
+        # with open((model_path / (run_id + '-RLE_none_model.p')), "wb") as handle:
+        #     pickle.dump(prep, handle, protocol=4)
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = prep.transform(testz[t])
-                    test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = prep.transform(testz[t])
+                test_prep[t].to_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'))
+                
+    elif p == 'VST':
+        
+        if args.test_data:
+            poi = trainz_path + '" -t "' + '" "'.join(
+                testz_path.values())
+        else:
+            poi = trainz_path
 
-        case 'VST':
+        os.system((Path(__file__).parent.resolve().as_posix() + 
+                   '/VST_preprocessing.R -d "' + poi +
+                   '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                   ' -p "' + model_path.as_posix() + '"' +
+                   ' --datetime ' + run_id))
 
-            if args.test_data:
-                poi = trainz_path + '" -t "' + '" "'.join(
-                    testz_path.values())
-            else:
-                poi = trainz_path
+        train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
-            os.system((Path(__file__).parent.resolve().as_posix() + 
-                       '/VST_preprocessing.R -d "' + poi +
-                       '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
-                       ' -p "' + model_path.as_posix() + '"' +
-                       ' --datetime ' + run_id))
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                           index_col=0)
+    
+    elif p == 'GeVST':
+        
+        if args.test_data:
+            poi = trainz_path + '" -t "' + '" "'.join(
+                testz_path.values())
+        else:
+            poi = trainz_path
 
-            train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
+        os.system((Path(__file__).parent.resolve().as_posix()
+                   + '/GeVST_preprocessing.R -d "' + poi
+                   + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                   ' -p "' + model_path.as_posix()
+                   + '" -g ' + args.gene_length +
+                  ' --datetime ' + run_id))
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
-                                               index_col=0)
+        train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
-        case 'GeVST':
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                           index_col=0)
+                
+    elif p == 'TMM':
+        
+        if args.test_data:
+            poi = trainz_path + '" -t "' + '" "'.join(
+                testz_path.values())
+        else:
+            poi = trainz_path
 
-            if args.test_data:
-                poi = trainz_path + '" -t "' + '" "'.join(
-                    testz_path.values())
-            else:
-                poi = trainz_path
+        os.system((Path(__file__).parent.resolve().as_posix() 
+                   + '/TMM_preprocessing.R -d "' + poi
+                   + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                   ' -p "' + model_path.as_posix() + '"' +
+                  ' --datetime ' + run_id))
 
-            os.system((Path(__file__).parent.resolve().as_posix()
-                       + '/GeVST_preprocessing.R -d "' + poi
-                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
-                       ' -p "' + model_path.as_posix()
-                       + '" -g ' + args.gene_length +
-                      ' --datetime ' + run_id))
+        train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
-            train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                           index_col=0)
+                
+    elif p == 'GeTMM':
+        
+        if args.test_data:
+            poi = trainz_path + '" -t "' + '" "'.join(
+                testz_path.values())
+        else:
+            poi = trainz_path
 
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
-                                               index_col=0)
-        case 'TMM':
+        os.system((Path(__file__).parent.resolve().as_posix() 
+                   + '/GeTMM_preprocessing.R -d "' + poi
+                   + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
+                   ' -p "' + model_path.as_posix()
+                   + '" -g ' + args.gene_length +
+                  ' --datetime ' + run_id))
 
-            if args.test_data:
-                poi = trainz_path + '" -t "' + '" "'.join(
-                    testz_path.values())
-            else:
-                poi = trainz_path
+        train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
 
-            os.system((Path(__file__).parent.resolve().as_posix() 
-                       + '/TMM_preprocessing.R -d "' + poi
-                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
-                       ' -p "' + model_path.as_posix() + '"' +
-                      ' --datetime ' + run_id))
-
-            train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
-
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
-                                               index_col=0)
-        case 'GeTMM':
-
-            if args.test_data:
-                poi = trainz_path + '" -t "' + '" "'.join(
-                    testz_path.values())
-            else:
-                poi = trainz_path
-
-            os.system((Path(__file__).parent.resolve().as_posix() 
-                       + '/GeTMM_preprocessing.R -d "' + poi
-                       + '" -o "' + dataset_path.as_posix() + '" -r ' + run_id +
-                       ' -p "' + model_path.as_posix()
-                       + '" -g ' + args.gene_length +
-                      ' --datetime ' + run_id))
-
-            train_prep = pd.read_csv(dataset_path / (run_id + '_train-' + p + '_none.csv'), index_col=0)
-
-            if args.test_data:
-                test_prep = {}
-                for t in args.test_data:
-                    test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
-                                               index_col=0)
-
-        case 'none':
-            train_prep = pd.read_csv(dataset_path / (run_id + '_train-none_none.csv'), index_col=0)
-
+        if args.test_data:
+            test_prep = {}
+            for t in args.test_data:
+                test_prep[t] = pd.read_csv(dataset_path / (run_id + '_' + Path(t).stem + '-' + p + '_none.csv'),
+                                           index_col=0)
+                
+    elif p == 'none':
+        
+        train_prep = pd.read_csv(dataset_path / (run_id + '_train-none_none.csv'), index_col=0)
 
     ### Plot prep data
     if not args.plots[0] == 'False':
