@@ -34,7 +34,7 @@ Parameters:
 
 While the Docker version of the code is the easiest implementation, this version may not utilize GPU resources, which are particularly valuable for the autoencoder optimization step. The framework has also been made available on GitHub with a standard conda environment .yml file, which can be used to create a conda environment with the packages necessary to run the DeepSeqDock framework. 
 
-For this approach, first make sure that a conda package manager is [installed](https://docs.conda.io/en/latest/miniconda.html) and the DeepSeqDock GitHub repository has been [cloned](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forked](https://docs.github.com/en/get-started/quickstart/fork-a-repo) locally if you would like to make changes. This approach has only been tested in Linux environments, and may require changes to be functional in Mac or Windows OS. 
+For this approach, first make sure that a conda package manager is [installed](https://docs.conda.io/en/latest/miniconda.html) and the DeepSeqDock GitHub repository has been [cloned](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forked](https://docs.github.com/en/get-started/quickstart/fork-a-repo) locally if you would like to make changes. This approach has only been tested in Ubuntu environments, and may require changes to be functional in Mac or Windows OS. 
 
 To install the DeepSeqDock conda environment from the [terminal](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file):
 
@@ -46,25 +46,7 @@ and then activate the environment before running the modules.
 ```shell
 conda activate DeepSeqDock
 ```
-
-Since some of the conda versions of the R packages do not work well with the python packages installed, it is necessary to install them in R, which is not tracked in the conda environment.
-
-```shell
-Rscript -e "install.packages('plyr', repos='http://cran.us.r-project.org', dependencies = TRUE)"
-Rscript -e "install.packages('BiocManager')"
-Rscript -e "BiocManager::install('edgeR, version = '3.15')"
-Rscript -e "BiocManager::install('DESeq2', version = '3.15')"
-Rscript -e "install.packages('argparse')"
-```
-
-To run the scripts, it may also be necessary to make them executable.
-
-```shell
-chmod 744 -R DeepSeqDock/scripts
-chmod 744 -R DeepSeqDock/tools
-```
-
-It may also be necessary to install wget, though it comes pre-installed in most Linux OS. 
+For Ubuntu version 20.10 and above, it may be necessary to install libffi7_3. The dependency chain with R does not allow for updated versions of python to be used at the time of this writing.
 
 ## Quick start
 
