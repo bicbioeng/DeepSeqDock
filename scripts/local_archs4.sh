@@ -104,7 +104,7 @@ msg "- compress: ${compress-}"
 if [ "${compress-}" = true ]; then
   if [ ! -f "$script_dir/human_index.idx" ]; then
     msg "${BLUE}Downloading Kallisto index file. This process may take awhile (2 GB). ${NOFORMAT}"
-    wget "https://s3.amazonaws.com/mssm-seq-index/human_index.idx"
+    wget "https://s3.amazonaws.com/mssm-seq-index/human_index.idx" --directory-prefix "$script_dir"
   else
     msg "${RED}Kallisto index file already present. Skipping download. ${NOFORMAT}"
   fi
