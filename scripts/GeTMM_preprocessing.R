@@ -1,4 +1,4 @@
-#!/opt/conda/envs/DeepSeqDock/bin/Rscript
+#!/usr/bin/env Rscript
 
 suppressPackageStartupMessages(library("argparse", warn.conflicts = FALSE, quietly = TRUE))
 suppressPackageStartupMessages(library("edgeR"))
