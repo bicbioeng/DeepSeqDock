@@ -78,14 +78,14 @@ if args.meta:
                scaling_path +
                '" -m "' + args.meta + '" --datetime ' +
                 dt + ' -d "' +
-               '" "'.join(doi) + '"'))
+               '" "'.join(doi) + '" -o "' + args.output_directory + '"'))
 else:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / args.autoencoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path + '" --datetime ' +
                 dt + ' -d "' +
-               '" "'.join(doi) + '"'))
+               '" "'.join(doi) + '" -o "' + args.output_directory + '"'))
 
 print("\n \033[1;32m myHarmonizer run: myHarmonizer-" + dt)
 print("")
