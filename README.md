@@ -21,14 +21,24 @@ As with all deep learning approaches, the more clean data available, the stronge
 
 ### Docker
 
-The most straightforward implemenatation of DeepSeqDock is the Dockerized version
+The most straightforward implemenatation of DeepSeqDock is the Dockerized version. First, make sure docker is installed. If using a Windows system, then Docker can be run through WSL2.
+
+Load the docker image:
+
 ```
-docker run -d --rm --name deepseqdock us-central1-docker.pkg.dev/nosi-usd-biofilm/nosi-usd-biofilm-arti/deepseqdock
+docker load < deepseqdock.tar.gz
 ```
+
+then run the container interactively:
+
+```
+docker run -it --rm -v "$HOME"/deepseqdockoutput:/app/output deepseqdock
+```
+
 Parameters:
- - -d: detach mode
+ - -it: interactive mode
  - --rm: automatic clean container when container stop
- - --name : specify container name
+ - --v: bind container volume to host folder. Host folder will by default be in deepseqdockoutput folder of WSL2 or Linux home folder.
 
 ### Conda environment
 
