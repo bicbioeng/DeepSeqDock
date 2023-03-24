@@ -4,16 +4,21 @@
 
 The advent of high-throughput RNA-sequencing has led to the development of vast databases of sample transcriptomic data. A number of existing projects have sought to bring this data to a more unified representation to facilitate harmonization of multi-institutional RNA-sequencing datasets by unified quality control and mapping pipelines. The output of these efforts is useful for such downstream applications as machine learning and similarity assessment between samples. 
 
-The DeepSeqDock framework takes this approach one step further by providing a unified framework for developing, running, and assessing the meaningfulness of data representations with regards to discrete biological metadata. This harmonization framework incorporates multiple frozen methods for normalization and scaling. Additionally, there is a module for optimizing and building a type of unsupervised deep learning model known as the autoencoder, which has proven useful for denoising tasks in a number of domains.
+The DeepSeqDock framework takes this approach one step further by providing a unified framework for developing, running, and assessing the meaningfulness of data representations with regards to discrete biological metadata. This harmonization framework incorporates multiple frozen methods for normalization and scaling. Additionally, there is a module for optimizing and building a type of unsupervised deep learning model known as the autoencoder, which has proven useful for denoising tasks in a number of domains. DeepSeqDock also provides a module for evaluation of the different data representations with regards to categorical sample metadata, so that the efficacy of the preprocessing and encoding steps can be quantitatively assessed. 
 
-DeepSeqDock also provides a module for evaluation of the different data representations with regards to categorical sample metadata, so that the efficacy of the preprocessing and encoding steps can be quantitatively assessed. 
+As a convenience, this framework also provides a local implementation of the pipeline used to preprocess the [ArchS4](https://maayanlab.cloud/archs4/) dataset, to facilitate integration of user datasets with sequence read archive (SRA) data from the ARCHS4 dataset. Individual datasets can also be aligned using the [Elysium](https://maayanlab.cloud/cloudalignment/elysium.html) tool from the Ma'ayan lab for smaller datasets for integration with ARCHS4 data.
 
 The input for this framework is uniformly aligned bulk RNA-sequencing count data matrices. These matrices may be subsets of massive online datasets such as the ARCHS4 dataset, GREIN, or TCGA.
 
 The output from the DeepSeqDock framework include 1) a myHarmonizer json object that can be fed into the myHarmonizer python package or web application to allow for the preprocessing and encoding of additional datasets, 2) quality control and metadata from each module in the framework, and 3) a unified representation of the dataset after each of normalization, scaling, and encoding that can be used for additional, downstream applications. 
 
-This framework also provides a local implementation of the pipeline used to preprocess the [ArchS4](https://maayanlab.cloud/archs4/) dataset, to facilitate integration of user datasets with sequence read archive (SRA) data from the ARCHS4 dataset. Individual datasets can also be aligned using the [Elysium](https://maayanlab.cloud/cloudalignment/elysium.html) tool from the Ma'ayan lab for smaller datasets for integration with ARCHS4 data.
+In short, the DeepSeqDock framework:
 
+1) Uniformly aligns RNA-seq data according to the ARCHS4 pipeline
+2) Normalizes and scales data 
+3) Optimizes and builds an autoencoder to transform normalized data
+4) Evaluates dataset representations (e.g. before and after autoencoder) relative to categorical sample metadata (e.g. biological condition)
+5) Builds a pipeline for transforming new data into the condensed representation of the training data / knowledge base to evaluate similarity between new data and knowledge base data (myHarmonizer object)
 
 <img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1.png?raw=true" alt="Fig1" width="800"/>
 
@@ -79,7 +84,7 @@ python scripts/build_myHarmonizer_fromDataset.py -d supporting/train.csv -v supp
 ```
 
 
-## Local ARCHS4
+##1) Local ARCHS4
 
 To run the local ARCHS4 pipeline, FASTQ files for each sample should be placed inside of unique folders. It is assumed that paired-end reads will have two FASTQ files and single-end reads will have a single FASTQ file. All sample folders should be kept inside one folder (e.g. sampledir) that will be the input for the script. If dumping FASTQ files from the SRA, it is recommended that the flags --concatenate-reads --include-technical are included since the original ARCHS4 pipeline was run with the fastq-dump utility instead of fasterq-dump (see bottom of [fasterq-dump documentation](https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump).
 
@@ -95,7 +100,7 @@ Sample FASTQ files have been provided in the 'supporting' folder for testing. Fo
 scripts/local_archs4.sh -d supporting/fastq -i true
 ```
 
-## Normalization and scaling
+##2) Normalization and scaling
 
 The purpose of this module is to normalize and scale input data, and provide frozen parameters for these preprocessing methods so that they can be reproduced afterwards. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation (and test) dataset(s) should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. 
 
@@ -117,7 +122,7 @@ Sample train, validation, and test csv files have been made available in the 'su
 python scripts/normalize_scale.py -d supporting/train.csv -t supporting/test.csv supporting/valid.csv --datetime 1900_01_01-00_00_00
 ```
 
-## Optimize and build autoencoder
+##3) Optimize and build autoencoder
 
 <span style="color:red">This module may run a long time (hours) with default parameters!</span>
 
@@ -137,7 +142,7 @@ The sample data in the supporting folder can again be used to test this function
 python scripts/autoencoder_optimization.py -d "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" -v "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" -t "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" --min_budget 10 --max_budget 100 --n_iterations 2 --datetime 2000_01_01-00_00_00
 ```
 
-## Categorical Evaluation
+##4) Categorical Evaluation
 
 This module is intended to use sample metadata to evaluate the meaningfulness of the data representation with regards to continuous similarity metrics and downstream classification machine learning models. To run this module, test (validation) csv(s) should be provided as well as a csv with samples as rows and columns as categorial (nominal) sample characteristics. Examples of this type of sample metadata may be disease state, tissue of origin, etc. Detailed descriptions of arguments are available as:
 
@@ -145,7 +150,7 @@ This module is intended to use sample metadata to evaluate the meaningfulness of
 python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/test.csv -m supporting/trainmeta.csv
 ```
 
-## Build myHarmonizer Object
+##5) Build myHarmonizer Object
 
 This final module utilizes the outputs from normalization, scaling, and autoencoder transformations to build a myHarmonizer object, that can be input into the myHarmonizer python package or web application to transform new datasets that fall within the domain of the knowledge base datasets into the same condensed data representation as the output from the autoencoder. Assuming that the output directory tree has been kept intact during the running of the normalization and autoencoder modules, a convenience script has been written to automatically pull all of the necessary data and models based on the name of the autoencoder of interest (can be found at the end of the autoencoder optimization script). If output directory is not located in the current working directory, then the output folder should also be supplied.
 
