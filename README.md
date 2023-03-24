@@ -84,7 +84,7 @@ python scripts/build_myHarmonizer_fromDataset.py -d supporting/train.csv -v supp
 ```
 
 
-##1) Local ARCHS4
+## 1) Local ARCHS4
 
 To run the local ARCHS4 pipeline, FASTQ files for each sample should be placed inside of unique folders. It is assumed that paired-end reads will have two FASTQ files and single-end reads will have a single FASTQ file. All sample folders should be kept inside one folder (e.g. sampledir) that will be the input for the script. If dumping FASTQ files from the SRA, it is recommended that the flags --concatenate-reads --include-technical are included since the original ARCHS4 pipeline was run with the fastq-dump utility instead of fasterq-dump (see bottom of [fasterq-dump documentation](https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump).
 
@@ -100,7 +100,7 @@ Sample FASTQ files have been provided in the 'supporting' folder for testing. Fo
 scripts/local_archs4.sh -d supporting/fastq -i true
 ```
 
-##2) Normalization and scaling
+## 2) Normalization and scaling
 
 The purpose of this module is to normalize and scale input data, and provide frozen parameters for these preprocessing methods so that they can be reproduced afterwards. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation (and test) dataset(s) should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. 
 
@@ -122,7 +122,7 @@ Sample train, validation, and test csv files have been made available in the 'su
 python scripts/normalize_scale.py -d supporting/train.csv -t supporting/test.csv supporting/valid.csv --datetime 1900_01_01-00_00_00
 ```
 
-##3) Optimize and build autoencoder
+## 3) Optimize and build autoencoder
 
 <span style="color:red">This module may run a long time (hours) with default parameters!</span>
 
@@ -142,7 +142,7 @@ The sample data in the supporting folder can again be used to test this function
 python scripts/autoencoder_optimization.py -d "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" -v "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" -t "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" --min_budget 10 --max_budget 100 --n_iterations 2 --datetime 2000_01_01-00_00_00
 ```
 
-##4) Categorical Evaluation
+## 4) Categorical Evaluation
 
 This module is intended to use sample metadata to evaluate the meaningfulness of the data representation with regards to continuous similarity metrics and downstream classification machine learning models. To run this module, test (validation) csv(s) should be provided as well as a csv with samples as rows and columns as categorial (nominal) sample characteristics. Examples of this type of sample metadata may be disease state, tissue of origin, etc. Detailed descriptions of arguments are available as:
 
@@ -150,7 +150,7 @@ This module is intended to use sample metadata to evaluate the meaningfulness of
 python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/test.csv -m supporting/trainmeta.csv
 ```
 
-##5) Build myHarmonizer Object
+## 5) Build myHarmonizer Object
 
 This final module utilizes the outputs from normalization, scaling, and autoencoder transformations to build a myHarmonizer object, that can be input into the myHarmonizer python package or web application to transform new datasets that fall within the domain of the knowledge base datasets into the same condensed data representation as the output from the autoencoder. Assuming that the output directory tree has been kept intact during the running of the normalization and autoencoder modules, a convenience script has been written to automatically pull all of the necessary data and models based on the name of the autoencoder of interest (can be found at the end of the autoencoder optimization script). If output directory is not located in the current working directory, then the output folder should also be supplied.
 
