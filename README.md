@@ -47,6 +47,8 @@ Parameters:
  - --rm: automatic clean container when container stop
  - --v: bind container volume to host folder. Host folder will by default be in deepseqdockoutput folder of WSL2 or Linux home folder.
 
+If these defaults are kept, the output directory in the Docker container will be mirrored by the deepseqdockoutput folder in the home directory of the user. User data can be placed in this directory to be accessed by the running Docker container. 
+
 ### Conda environment
 
 While the Docker version of the code is the easiest implementation, this version may not utilize GPU resources, which are particularly valuable for the autoencoder optimization step. The framework has also been made available on GitHub with a standard conda environment .yml file, which can be used to create a conda environment with the packages necessary to run the DeepSeqDock framework. 
