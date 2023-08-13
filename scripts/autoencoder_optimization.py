@@ -40,7 +40,7 @@ parser.add_argument('-d', '--train_data', type=str, required=True,
 parser.add_argument('-v', '--valid_data', type=str, required=True,
                     help='Path to validation data csv. Samples as rows and features as columns. Required.')
 parser.add_argument('-t', '--test_data', type=str, nargs="*",
-                    help='List of paths separated by spaceds to test data csv(s). '
+                    help='List of paths separated by spaces to test data csv(s). '
                          'Samples as rows and features as columns. Optional.', default=[])
 parser.add_argument('-o', '--output_directory', type=str,
                     help='Directory to which output will be written', default='output')
