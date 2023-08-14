@@ -82,7 +82,7 @@ python scripts/build_myHarmonizer_fromDataset.py --help
 To run the workflow with a toy dataset (and toy autoencoder optimization settings):
 
 ```shell
-python scripts/build_myHarmonizer_fromDataset.py -d supporting/train.csv -v supporting/valid.csv -m supporting/trainmeta.csv --min_budget 10 --max_budget 100 --n_iterations 2
+python scripts/build_myHarmonizer_fromDataset.py -d supporting/train.csv -v supporting/valid.csv -m supporting/meta.csv --min_budget 10 --max_budget 100 --n_iterations 2
 ```
 
 
@@ -149,7 +149,7 @@ python scripts/autoencoder_optimization.py -d "output/Data Representations/Norma
 This module is intended to use sample metadata to evaluate the meaningfulness of the data representation with regards to continuous similarity metrics and downstream classification machine learning models. To run this module, test (validation) csv(s) should be provided as well as a csv with samples as rows and columns as categorial (nominal) sample characteristics. Examples of this type of sample metadata may be disease state, tissue of origin, etc. Detailed descriptions of arguments are available as:
 
 ```shell
-python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/test.csv -m supporting/trainmeta.csv
+python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/test.csv -m supporting/meta.csv
 ```
 
 ## 5) Build myHarmonizer Object
