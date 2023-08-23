@@ -259,10 +259,13 @@ def calculate_mannwhitneyu_from_distribution(df, ytest, distance=False):
         cond2 = np.array(conddf.loc[othervalues, 'Values'], dtype=float)
 
         if not distance:
-            _, pvalue = mannwhitneyu(cond1, cond2, alternative='greater')
+            _, pvalue = mannwhitneyu(cond1, cond2, alternative='greater')                   
         else:
             _, pvalue = mannwhitneyu(cond1, cond2, alternative='less')
 
+        # Cap -log pvalue at 100
+        if pvalue < 1e-100:
+            pvalue = 1e-100
         mw_p.append(-np.log10(pvalue))
 
     return dict(zip(yvalues, mw_p))

@@ -80,7 +80,7 @@ normalized_train_data = (Path(args.output_directory) / "Data Representations" / 
                          ('preprocess_' + dt + '_train-' + args.preprocessing_method + "_" + args.scaling_method.lower()
                           + ".csv")).as_posix()
 normalized_valid_data = (Path(args.output_directory) / "Data Representations" / 'Normalized' / ('preprocess_' + dt) /
-                         ('preprocess_' + dt + '_valid-' + args.preprocessing_method + "_" + args.scaling_method .lower()
+                         ('preprocess_' + dt + '_' + Path(args.valid_data).stem + '-' + args.preprocessing_method + "_" + args.scaling_method .lower()
                           + ".csv")).as_posix()
 
 if args.test_data:

@@ -18,7 +18,7 @@ import warnings
 
 
 parser = argparse.ArgumentParser(description='This script runs an evaluation using three possible methods: classification,'
-                                             'a silhouette metric, and a Mann Whitney U Test metric. To run these tests,'
+                                             'a silhouette indicator, and a Mann Whitney U Test indicator. To run these tests,'
                                              'a csv of the data representation with rows as samples and columns as features'
                                              'is required. Additionally, a csv of metadata is required with sample in the rows'
                                              'and at least one column defining discrete (categorical) distinction of interest.'
@@ -100,13 +100,15 @@ if args.characteristic:
     try:
         ytest = meta[args.characteristic][test.index]
         if args.train:
-            ytrain = meta[args.characteristic][train.index]
+            if trainoverlap.shape[0] > 3:
+                ytrain = meta[args.characteristic][train.index]
     except:
         raise Exception("Unable to map input characteristic to metadata column.")
 else:
     ytest = meta.iloc[:, 0][test.index]
     if args.train:
-        ytrain = meta.iloc[:, 0][train.index]
+        if trainoverlap.shape[0] > 3:
+            ytrain = meta.iloc[:, 0][train.index]
 
 ## Evaluate number of categories in y
 print("\nThere were {} categories identified in the test data.".format(ytest.unique()))
@@ -120,7 +122,7 @@ if args.plots == 'True':
 for e in args.eval:
     if e == 'classification':
 
-        if args.train:
+        try:
             # Train and test classifiers
             accuracy, precision, recall = ev.get_all_classifier_metrics(train, ytrain, test, ytest)
 
@@ -145,8 +147,8 @@ for e in args.eval:
                 fig = ax.get_figure()
                 fig.savefig(qc_path/'classification_barplot.png',
                             bbox_inches='tight')
-        else:
-            warnings.warn("No training data was uploaded so classification evaluation was not run.")
+        except:
+            warnings.warn("Training data was not uploaded or greater than three samples could not be mapped so classification evaluation was not run.")
 
             
                 
@@ -252,14 +254,14 @@ for e in args.eval:
                 ax = sns.barplot(x='Comparison', y='Value', hue='Similarity', data=utest_df2,
                                  palette='colorblind')
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-                ax.set_ylim(0, 1)
+                ax.set_ylim(0, 100)
 
                 fig = ax.get_figure()
                 fig.savefig(qc_path/'utest_barplot.png',
                             bbox_inches='tight')
             else:
                 cg = sns.clustermap(utest_df,
-                                    cmap="mako", vmin=0, vmax=1)
+                                    cmap="mako", vmin=0, vmax=100)
                 plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=30)
                 plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
 
