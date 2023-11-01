@@ -551,7 +551,7 @@ for p in prep_method:
                     except:
                         warnings.warn("Unable to plot all distributions for " + p + " feature scaled data.")
             del train_prep_sm, feature_scaler
-        print(p + ' preprocessing feature scaling complete.')
+            print(p + ' preprocessing feature scaling complete.')
 
     else:
         warnings.warn("Infinite values in train data. Unable to fit min-max scaling for " + p)

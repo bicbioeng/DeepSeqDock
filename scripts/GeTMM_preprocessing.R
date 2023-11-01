@@ -21,7 +21,7 @@ parser$add_argument('-r', '--preprocessing_run', type='character',
                     help='Preprocessing run number.')
 
 parser$add_argument('-g', '--gene_length', type='character',
-                    help='Path to gene length csv.')
+                    help='Path to gene length csv. First column gene name (matched to data), second column gene length.')
 
 parser$add_argument('-p', '--params', type='character',
                     help='Path to training parameters for frozen normalization.')
@@ -288,8 +288,9 @@ g_tmm_preprocessing <- function(file, gene_length=NULL, referenceSample=NULL){
   }
 
   #preprocess with gene length
-  data_g = data[rownames(data) %in% genelength$gene,]
-  genelength_g = genelength$med[match(rownames(data_g), genelength$gene)]
+  data_g = data[rownames(data) %in% genelength[, 1],]
+  genelength_g = genelength[match(rownames(data_g), genelength[, 1]), 2]
+  print(paste0(length(genelength_g), " genes matched to gene lengths."))
 
   if(nrow(data_g) == length(genelength_g)){
     data_g = sweep(data_g, 1, as.array(genelength_g), `/`)
