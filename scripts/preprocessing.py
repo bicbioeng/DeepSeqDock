@@ -266,6 +266,7 @@ def gene_length_scaling(datas, genelength):
     allgenelength = datas.columns.isin(genelength.index)
     datas = datas.loc[:, allgenelength]
     genelength = genelength.loc[datas.columns]
+    print("{} genes match gene length files.".format(genelength.size))
 
     datas_scaled = datas.divide(genelength, axis='columns')
     return datas_scaled
