@@ -21,7 +21,7 @@ parser$add_argument('-r', '--preprocessing_run', type='character',
                     help='Preprocessing run number.')
 
 parser$add_argument('-g', '--gene_length', type='character',
-                    help='Path to gene length csv.')
+                    help='Path to gene length csv. First column gene name (matched to data), second column gene length.')
 
 parser$add_argument('-p', '--params', type='character',
                     help='Path to training parameters for frozen normalization.')
@@ -113,8 +113,9 @@ vst_preprocessing <- function(file, geneCorr = c('none', 'rpk'), dispersionList=
              genelength = read.csv(geneLengthFile)
              
              #preprocess with gene length
-             data = data_r[,colnames(data_r) %in% genelength$gene]
-             genelength_g = genelength$med[match(colnames(data), genelength$gene)]
+             data = data_r[,colnames(data_r) %in% genelength[, 1]]
+             genelength_g = genelength[match(colnames(data), genelength[, 1]), 2]
+             print(paste0(length(genelength_g), " genes matched to gene lengths."))
              
              if(ncol(data) == length(genelength_g)){
                data = ceiling(sweep(data, 2, as.array(genelength_g), `/`)*10000)
