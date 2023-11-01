@@ -141,7 +141,7 @@ if args.test_data:
     for t in args.test_data:
         test_data[t] = pd.read_csv(Path(t), index_col=0).astype('float32')
 
-gene_length = pd.read_csv((Path(__file__).parents[1] / 'supporting' / 'genelength.csv'), index_col=0).iloc[:, 0]
+gene_length = pd.read_csv(args.gene_length, index_col=0).iloc[:, 0]
 
 seed = randint(1, 100)
 
