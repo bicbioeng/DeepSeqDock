@@ -171,8 +171,9 @@ vst_preprocessing <- function(file, geneCorr = c('none', 'rpk'), dispersionList=
              genelength = dispersionList$genelength
 
              #preprocess with gene length
-             data = data_r[,colnames(data_r) %in% genelength$gene]
-             genelength_g = genelength$med[match(colnames(data), genelength$gene)]
+             data = data_r[,colnames(data_r) %in% genelength[,1]]
+             genelength_g = genelength[match(colnames(data), genelength[,1]),2]
+             print(paste0(length(genelength_g), " genes matched to gene lengths."))
              
              if(ncol(data) == length(genelength_g)){
                data = ceiling(sweep(data, 2, as.array(genelength_g), `/`)*10000)
