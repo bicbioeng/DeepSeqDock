@@ -21,6 +21,8 @@ import ConfigSpace.hyperparameters as CSH
 
 import tensorflow as tf
 
+import sklearn.ensemble as ensemble
+
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matploblib.pyplot or pylab (see https://stackoverflow.com/questions/4706451/how-to-save-a-figure-remotely-with-pylab/4706614#4706614)
 import matplotlib.pyplot as plt
@@ -44,6 +46,10 @@ parser.add_argument('-t', '--test_data', type=str, nargs="*",
                          'Samples as rows and features as columns. Optional.', default=[])
 parser.add_argument('-o', '--output_directory', type=str,
                     help='Directory to which output will be written', default='output')
+parser.add_argument('-m', '--meta', type=str,
+                    help='Path to metadata csv. Named samples in first column and characteristic metadata in second column. '
+                         'Only required if using feature selection. Train dataset metadata '
+                         'must also be included.', required=False, default=None)
 parser.add_argument('--min_budget', type=float, help='Min number of epochs for training', default=100)
 parser.add_argument('--max_budget', type=float, help='Max number of epochs for training', default=2000)
 parser.add_argument('--n_iterations', type=int, help='Number of iterations performed by the optimizer', default=20)
@@ -52,27 +58,49 @@ parser.add_argument('--nic_name', type=str, help='Which network interface to use
 parser.add_argument('--scheduler', type=str, help='Learning rate scheduler. One of 1cycle, 1cycle2, exponential, power',
                     default="power")
 parser.add_argument('--modeltype', type=str, help="autoencoder", default="autoencoder")
+parser.add_argument('--featureselection', type=str, 
+                    help="Method by which features are ranked. Options are variance and impurity where impurity is " 
+                    "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
+                    default='variance')
 parser.add_argument('--datetime', type=str, help="Used internally to identify runs")
 
 args = parser.parse_args()
 
 
 class KerasWorker(Worker):
-    def __init__(self, train_data, valid_data, scheduler, modeltype='autoencoder', **kwargs):
+    def __init__(self, train_data, valid_data, scheduler, modeltype='autoencoder', featureselection='variance', meta=None, **kwargs):
         super().__init__(**kwargs)
 
         self.train_data = Path(train_data)
         self.valid_data = Path(valid_data)
         self.modeltype = modeltype
         self.scheduler = scheduler
-
+        self.featureselection = featureselection
 
         # Load datasets
         self.x_train = pd.read_csv(train_data, index_col=0).astype('float32')
         self.x_valid = pd.read_csv(valid_data, index_col=0).astype('float32')
 
-        # Order features, highest variance to lowest
-        self.feature_order = self.x_train.var(axis=0).sort_values(ascending=False).index
+        if self.featureselection == 'variance':
+            # Order features, highest variance to lowest
+            self.feature_order = self.x_train.var(axis=0).sort_values(ascending=False).index
+        elif self.featureselection == 'impurity':
+            # Order features based on mean decrease in impurity
+            if meta is None:
+                raise NameError("Upload metadata if performing feature selection.")
+            else:
+                y_train = pd.read_csv(Path(meta), index_col=0)
+                y_train = y_train.loc[self.x_train.index,]
+                
+                forest = ensemble.RandomForestClassifier(random_state=32)
+                if isinstance(y_train, pd.DataFrame):
+                    forest.fit(self.x_train, y_train.iloc[:,0])
+                else:
+                    forest.fit(self.x_train, y_train)
+
+                importances = pd.Series(forest.feature_importances_, index=self.x_train.columns)
+
+                self.feature_order = importances.sort_values(ascending=False).index
 
     def compute(self, config, budget, *args, **kwargs):
 
@@ -218,6 +246,8 @@ elif args.debug == "False":
                     modeltype=args.modeltype,
                     run_id=run_id,
                     host=host,
+                    featureselection=args.featureselection, 
+                    meta=args.meta,
                     nameserver=ns_host,
                     nameserver_port=ns_port)
     w.run(background=True)
@@ -374,6 +404,7 @@ elif args.debug == "False":
 
     argsdict = {'train_data': args.train_data,
                 'valid_data': args.valid_data,
+                'meta_data': args.meta,
                 'output_directory': args.output_directory.as_posix(),
                 'min_budget': args.min_budget,
                 'max_budget': args.max_budget,
@@ -381,7 +412,8 @@ elif args.debug == "False":
                 'debug': args.debug,
                 'nic_name': args.nic_name,
                 'scheduler': args.scheduler,
-                'modeltype': args.modeltype}
+                'modeltype': args.modeltype,
+                'featureselection': args.featureselection}
 
     with open((modelpath / (run_id + '-encoder_input_args.json')), "w") as handle:
         json.dump(argsdict, handle)

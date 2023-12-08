@@ -14,7 +14,7 @@ parser.add_argument('-v', '--valid_data', type=str, required=True,
 parser.add_argument('-t', '--test_data', type=str, nargs="*",
                     help='Path to validation data csv. Samples as rows and features as columns. Required.')
 parser.add_argument('-m', '--meta', type=str,
-                    help='Path to metadata csv. Named samples as first row and characteristic metadata as columns.')
+                    help='Path to metadata csv. Named samples as first row and characteristic metadata as columns. Required if running feature selection.')
 parser.add_argument('-o', '--output_directory', type=str,
                     help='Directory to which output will be written', default='output')
 parser.add_argument('-g', '--gene_length', type=str,
@@ -41,6 +41,10 @@ parser.add_argument('--max_budget', type=float, help='Max number of epochs for t
 parser.add_argument('--n_iterations', type=int, help='Number of iterations performed by the optimizer', default=20)
 parser.add_argument('--scheduler', type=str, help='Learning rate scheduler. One of 1cycle, 1cycle2, exponential, power',
                     default="power")
+parser.add_argument('--featureselection', type=str, 
+                    help="Method by which features are ranked. Options are variance and impurity where impurity is " 
+                    "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
+                    default='variance')
 
 args = parser.parse_args()
 
@@ -96,12 +100,20 @@ if args.test_data:
 else:
     dataset1 = ('" -v "' + normalized_valid_data)
 
+if args.featureselection == 'variance':
+    fs = ""
+elif args.featureselection == 'impurity':
+    fs = "--featureselection=impurity " + "--meta=" + args.meta + " "
+else:
+    raise ValueError("Feature selection method can only be variance or impurity.")
+
 os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
            str(args.max_budget) + ' --n_iterations ' +
            str(args.n_iterations) + ' --scheduler ' +
+           fs + 
            args.scheduler + ' --datetime ' +
            dt))
 
