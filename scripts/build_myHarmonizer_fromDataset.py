@@ -103,11 +103,11 @@ else:
 if args.featureselection == 'variance':
     fs = ""
 elif args.featureselection == 'impurity':
-    fs = "--featureselection=impurity " + "--meta=" + args.meta + " "
+    fs = " --featureselection=impurity --meta=" + args.meta + " "
 else:
     raise ValueError("Feature selection method can only be variance or impurity.")
 
-os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
+print(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
@@ -115,6 +115,15 @@ os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencode
            str(args.n_iterations) + ' --scheduler ' +
            fs + 
            args.scheduler + ' --datetime ' +
+           dt))
+
+os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
+           normalized_train_data + dataset1 + '" -o "' +
+           args.output_directory + '" --min_budget ' +
+           str(args.min_budget) + ' --max_budget ' +
+           str(args.max_budget) + ' --n_iterations ' +
+           str(args.n_iterations) + ' --scheduler ' +
+           args.scheduler + fs + ' --datetime ' +
            dt))
 
 # Run build_myHarmonizer
