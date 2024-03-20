@@ -40,7 +40,23 @@ if(args$datetime == 'False'){
     run_id = args$datetime}
 
 
-## Modified functions from EdgeR
+## Modified functions from EdgeR #####################################################################################################
+# Original functions available under calcNormFactors_edgeR.R or at https://code.bioconductor.org/browse/edgeR/blob/RELEASE_3_16/R/calcNormFactors.R
+# Modified from edgeR Release_3_16 (modified 2 June 2020)
+# Citation:   Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential
+              # expression analysis of digital gene expression data. Bioinformatics 26, 139-140
+
+              # McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq
+              # experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297
+
+              # Chen Y, Lun ATL, Smyth GK (2016). From reads to genes to pathways: differential expression
+              # analysis of RNA-Seq experiments using Rsubread and the edgeR quasi-likelihood pipeline.
+              # F1000Research 5, 1438
+
+              # Chen Y, Chen L, Lun ATL, Baldoni PL, Smyth GK (2024). edgeR 4.0: powerful differential analysis
+              # of sequencing data with expanded functionality and improved support for small counts and larger
+              # datasets. bioRxiv doi: 10.1101/2024.01.21.576131
+# Last modified on 1 November 2023.
 
 calcNormFactors.modified <- function(object, lib.size=NULL, method=c("TMM","TMMwsp","RLE","upperquartile","none"), refColumn=NULL, logratioTrim=.3, sumTrim=0.05, doWeighting=TRUE, Acutoff=-1e10, p=0.75, factor_scaling=NULL, ...)
   #	Scale normalization of RNA-Seq data, for count matrices
@@ -107,10 +123,14 @@ calcNormFactors.modified <- function(object, lib.size=NULL, method=c("TMM","TMMw
   )
 
   #	Factors should multiple to one
+  ## Modified from edgeR Release_3_16 modified 2 June 2020.
+  ## Last modified on 1 November 2023.
   if(is.null(factor_scaling)) factor_scaling = exp(mean(log(f)))
   f <- f/factor_scaling
 
   #	Output
+  ## Modified from edgeR Release_3_16 modified 2 June 2020.
+  ## Last modified on 24 November 2023.
   names(f) <- colnames(x)
   list(f = f,
        ref = refColumn,
@@ -274,6 +294,8 @@ calcNormFactors.modified <- function(object, lib.size=NULL, method=c("TMM","TMMw
 
   2^TMM
  }
+
+## End Modified functions from EdgeR #################################################################################################
 
 g_tmm_preprocessing <- function(file, gene_length=NULL, referenceSample=NULL){
 

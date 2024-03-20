@@ -30,7 +30,7 @@ parser.add_argument('-t', '--test', type=str,
                     help='Path to dataset test representation csv. Samples as rows and features as columns.', required=True)
 
 parser.add_argument('-m', '--meta', type=str,
-                    help='Path to metadata csv. Named samples as first row and characteristic metadata as columns. '
+                    help='Path to metadata csv. Named samples as rows and characteristic metadata as columns. '
                          'If running evaluation with classifier machine learning models, train dataset metadata '
                          'must also be included.', required=True)
 
