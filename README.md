@@ -165,3 +165,26 @@ If the directory tree has been altered or the names changed, then it is also pos
 ```shell
 python scripts/build_myHarmonizer.py --help
 ``
+## Citations and Licensing
+
+This work includes functions modified from the calcNormFactors function in edgeR and the estimateSizeFactors function from DESeq2. Modified functions are marked and can be found in the GeTMM_preprocessing.R and GeVST_preprocessing.R files. Original code can be found under calcNormFactors_edgeR.R ([https://code.bioconductor.org/browse/edgeR/blob/RELEASE_3_16/R/calcNormFactors.R](https://code.bioconductor.org/browse/edgeR/blob/RELEASE_3_16/R/calcNormFactors.R)) or estimateSizeFactorsForMatrix_DESeq2.R ([https://code.bioconductor.org/browse/DESeq2/blob/RELEASE_3_12/R/core.R]( https://code.bioconductor.org/browse/DESeq2/blob/RELEASE_3_12/R/core.R)). DESeq2 is distributed under the [LGPL license (>=3)](https://www.gnu.org/licenses/lgpl-3.0.en.html) and edgeR is distributed under the [LGPL license (>=2)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html). A copy of LGPL 3.0 is also available in this repository. 
+
+DESeq2 Citation:
+
+Love, M.I., Huber, W., Anders, S. (2014) Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biology, 15:550. [https://doi.org/10.1186/s13059-014-0550-8](https://doi.org/10.1186/s13059-014-0550-8)  
+
+edgeR Citations:
+
+  1) Robinson MD, McCarthy DJ and Smyth GK (2010). edgeR: a Bioconductor package for differential
+  expression analysis of digital gene expression data. Bioinformatics 26, 139-140
+
+  2) McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq
+  experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297
+
+  3) Chen Y, Lun ATL, Smyth GK (2016). From reads to genes to pathways: differential expression
+  analysis of RNA-Seq experiments using Rsubread and the edgeR quasi-likelihood pipeline.
+  F1000Research 5, 1438
+
+  4) Chen Y, Chen L, Lun ATL, Baldoni PL, Smyth GK (2024). edgeR 4.0: powerful differential analysis
+  of sequencing data with expanded functionality and improved support for small counts and larger
+  datasets. bioRxiv doi: 10.1101/2024.01.21.576131
