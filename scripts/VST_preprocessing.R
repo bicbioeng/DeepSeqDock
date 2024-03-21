@@ -36,7 +36,11 @@ if(args$datetime == 'False'){
 } else {
     run_id = args$datetime}
 
-
+## Modified functions from DESeq2 #####################################################################################################
+# Original functions available under estimateSizeFactorsForMatrix_DESeq2.R or at https://code.bioconductor.org/browse/DESeq2/blob/RELEASE_3_12/R/core.R
+# Modified from DESeq2 Release_3_12 (19 Feb 2021)
+# Citation: Love, M.I., Huber, W., Anders, S. (2014) Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biology, 15:550. \url{https://doi.org/10.1186/s13059-014-0550-8}  
+# Last modified on 24 November 2023.
 estimateSizeFactorsForMatrix.modified <- function (counts, locfunc = stats::median, geoMeans, controlGenes, 
                                                    type = c("ratio", "poscounts")) 
 {
@@ -80,12 +84,15 @@ estimateSizeFactorsForMatrix.modified <- function (counts, locfunc = stats::medi
                                                  cnts > 0]))
     })
   }
+  ## Modified from DESeq2 Release_3_12 (19 Feb 2021).
+  ## Last modified on 24 November 2023. Modification was to comment out two lines below so that size
+  ## factors are not stabilized in the frozen representation (as this unfreezes the transformations).
   # if (incomingGeoMeans) {
   #   sf <- sf/exp(mean(log(sf)))
   # }
   sf
 }
-
+## End Modified functions from DESeq2 #################################################################################################
 
 # 10,000 genes was chosen as a multiplier because only 35/35238 genes were higher than this
 # (effective length in kb?). This value was chosen as a compromise so that the effect 
