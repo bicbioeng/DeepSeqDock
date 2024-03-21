@@ -20,7 +20,7 @@ In short, the DeepSeqDock framework:
 4) Evaluates dataset representations (e.g. before and after autoencoder) relative to categorical sample metadata (e.g. biological condition)
 5) Builds a pipeline for transforming new data into the condensed representation of the training data / knowledge base to evaluate similarity between new data and knowledge base data (myHarmonizer object)
 
-<img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1.png?raw=true" alt="Fig1" width="800"/>
+<img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1_web.png?raw=true" alt="Fig1" width="800"/>
 
 As with all deep learning approaches, the more clean data available, the stronger the model will be. The framework was tested on knowledge bases of hundreds to over a thousand datasets. This approach has not been validated for small knowledge bases (less than 100 samples). 
 
@@ -166,6 +166,15 @@ If the directory tree has been altered or the names changed, then it is also pos
 python scripts/build_myHarmonizer.py --help
 ```
 ## Citations and Licensing
+
+DeepSeqDock: a framework for representation learning and similarity evaluation of omics datasets. \
+Copyright (C) 2024 bicbioeng
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 This work includes functions modified from the calcNormFactors function in edgeR and the estimateSizeFactors function from DESeq2. Modified functions are marked and can be found in the GeTMM_preprocessing.R and GeVST_preprocessing.R files. Original code can be found under calcNormFactors_edgeR.R ([https://code.bioconductor.org/browse/edgeR/blob/RELEASE_3_16/R/calcNormFactors.R](https://code.bioconductor.org/browse/edgeR/blob/RELEASE_3_16/R/calcNormFactors.R)) or estimateSizeFactorsForMatrix_DESeq2.R ([https://code.bioconductor.org/browse/DESeq2/blob/RELEASE_3_12/R/core.R]( https://code.bioconductor.org/browse/DESeq2/blob/RELEASE_3_12/R/core.R)). DESeq2 is distributed under the [LGPL license (>=3)](https://www.gnu.org/licenses/lgpl-3.0.en.html) and edgeR is distributed under the [LGPL license (>=2)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html). A copy of LGPL 3.0 is also available in this repository. 
 
