@@ -20,7 +20,7 @@ In short, the DeepSeqDock framework:
 4) Evaluates dataset representations (e.g. before and after autoencoder) relative to categorical sample metadata (e.g. biological condition)
 5) Builds a pipeline for transforming new data into the condensed representation of the training data / knowledge base to evaluate similarity between new data and knowledge base data (myHarmonizer object)
 
-<img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1.png?raw=true" alt="Fig1" width="800"/>
+<img src="https://raw.githubusercontent.com/bicbioeng/DeepSeqDock/main/images/Fig1_web.png?raw=true" alt="Fig1" width="800"/>
 
 As with all deep learning approaches, the more clean data available, the stronger the model will be. The framework was tested on knowledge bases of hundreds to over a thousand datasets. This approach has not been validated for small knowledge bases (less than 100 samples). 
 
