@@ -28,7 +28,7 @@ As with all deep learning approaches, the more clean data available, the stronge
 
 ### Docker
 
-The most straightforward implemenatation of DeepSeqDock is the Dockerized version. First, make sure docker is installed. If using a Windows system, then Docker can be run through WSL2.
+The most straightforward implemenatation of DeepSeqDock is the Dockerized version. First, make sure docker is installed. If using a Windows system, then Docker can be run through WSL2. Next, download the DeepSeqDock image from: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119352.svg)](https://doi.org/10.5281/zenodo.10119352)
 
 Load the docker image:
 
