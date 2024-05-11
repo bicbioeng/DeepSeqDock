@@ -303,8 +303,26 @@ elif args.debug == "False":
         for t in args.test_data:
             x_test[t] = pd.read_csv(Path(t), index_col=0).astype('float32')
 
+    if args.featureselection == 'variance':
+        # Order features, highest variance to lowest
+        feature_order = x_train.var(axis=0).sort_values(ascending=False).index
+    elif args.featureselection == 'impurity':
+        # Order features based on mean decrease in impurity
+        if args.meta is None:
+            raise NameError("Upload metadata if performing feature selection.")
+        else:
+            y_train = pd.read_csv(Path(args.meta), index_col=0)
+            y_train = y_train.loc[x_train.index,]
+                
+            forest = ensemble.RandomForestClassifier(random_state=32)
+            if isinstance(y_train, pd.DataFrame):
+                forest.fit(x_train, y_train.iloc[:,0])
+            else:
+                forest.fit(x_train, y_train)
 
-    feature_order = x_train.var(axis=0).sort_values(ascending=False).index
+            importances = pd.Series(forest.feature_importances_, index=x_train.columns)
+
+            feature_order = importances.sort_values(ascending=False).index
 
     train = x_train.loc[:, feature_order[0:config['nfeatures']]]
     valid = x_valid.loc[:, feature_order[0:config['nfeatures']]]
