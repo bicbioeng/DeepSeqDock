@@ -37,7 +37,7 @@ Load the docker image:
 docker load < deepseqdock.tar.gz
 
 ## Windows
-docker load -i .\myharmonizerdock.tar.gz
+docker load -i .\deepseqdock.tar.gz
 ```
 
 then run the container interactively:
@@ -47,7 +47,7 @@ then run the container interactively:
 docker run -it --rm -v "$HOME"/deepseqdockoutput:/app/output deepseqdock
 
 ## Windows
-docker run -it –rm -v “c:\user\username\myharmonizeroutput:/app/myharmonizeroutput” myharmonizerdock
+docker run -it –rm -v “c:\user\username\deepseqdockoutput:/app/myharmonizeroutput” myharmonizerdock
 ```
 
 Parameters:
