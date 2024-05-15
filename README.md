@@ -28,18 +28,26 @@ As with all deep learning approaches, the more clean data available, the stronge
 
 ### Docker
 
-The most straightforward implemenatation of DeepSeqDock is the Dockerized version. First, make sure docker is installed. If using a Windows system, then Docker can be run through WSL2. Next, download the DeepSeqDock image from: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119352.svg)](https://doi.org/10.5281/zenodo.10119352)
+The most straightforward implemenatation of DeepSeqDock is the Dockerized version. First, make sure docker is installed. Next, download the DeepSeqDock image from: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119352.svg)](https://doi.org/10.5281/zenodo.10119352)
 
 Load the docker image:
 
 ```
+## WSL or Linux
 docker load < deepseqdock.tar.gz
+
+## Windows
+docker load -i .\myharmonizerdock.tar.gz
 ```
 
 then run the container interactively:
 
 ```
+## WSL or Linux
 docker run -it --rm -v "$HOME"/deepseqdockoutput:/app/output deepseqdock
+
+## Windows
+docker run -it –rm -v “c:\user\username\myharmonizeroutput:/app/myharmonizeroutput” myharmonizerdock
 ```
 
 Parameters:
@@ -49,7 +57,7 @@ Parameters:
 
 If these defaults are kept, the output directory in the Docker container will be mirrored by the deepseqdockoutput folder in the home directory of the user. User data can be placed in this directory to be accessed by the running Docker container. 
 
-### Conda environment
+### Conda environment for Linux/WSL
 
 While the Docker version of the code is the easiest implementation, this version may not utilize GPU resources, which are particularly valuable for the autoencoder optimization step. The framework has also been made available on GitHub with a standard conda environment .yml file, which can be used to create a conda environment with the packages necessary to run the DeepSeqDock framework. 
 
