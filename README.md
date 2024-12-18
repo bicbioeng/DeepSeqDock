@@ -8,7 +8,7 @@
 3. [Quick start](#quick-start)
 4. [Input and Output Formats](#input-and-output-formats)
 5. [Example Workflow](#example-workflow)
-6. [Citations and Licensing](#citations-and-license)
+6. [Citations and Licensing](#citations-and-licensing)
 
 ---
 
@@ -86,6 +86,40 @@ and then activate the environment before running the modules.
 conda activate DeepSeqDock
 ```
 For Ubuntu version 20.10 and above, it may be necessary to install libffi7_3. The dependency chain with R does not allow for updated versions of python to be used at the time of this writing.
+
+## Input and Output Formats
+
+### Supported Input Formats
+- FASTA
+- FASTQ
+- CSV
+
+### Output Formats
+- Processed data: CSV, JSON
+
+### Train/Validation/Test Data Schema
+The train, validation, and test datasets should adhere to the following schema:
+
+| Column Name     | Data Type   | Description                                 |
+|------------------|-------------|---------------------------------------------|
+| Empty     | String      | Unique identifier for each sample.          |
+| `feature_1`     | Int       | Value for the first feature.                |
+| `feature_2`     | Int       | Value for the second feature.               |
+| ...             | ...         | Additional features as columns.             |
+
+Samples are represented as rows, and features are represented as columns.
+
+### Metadata Data Schema
+The metadata file should contain the following structure, the data type of each characteristic is catergory:
+
+| Column Name     | Data Type   | Description                                 |
+|------------------|-------------|---------------------------------------------|
+| Empty     | String      | Unique identifier for each sample.          |
+| `characteristic_1` | String   | Metadata characteristic (e.g., condition).  |
+| `characteristic_2` | String   | Additional metadata (e.g., source, group).  |
+| ...             | ...         | Additional features as columns.             |
+
+The first column names the samples, and subsequent columns provide associated metadata.
 
 ## Quick start
 
