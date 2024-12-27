@@ -1,21 +1,285 @@
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
-from tensorflow.keras import backend
-
-from pathlib import Path
-
-import ConfigSpace as CS
-import ConfigSpace.hyperparameters as CSH
-
-from hpbandster.core.worker import Worker
-
-import logging
 
 #logging.basicConfig(level=logging.DEBUG)
 
 import pandas as pd
 import numpy as np
+
+from typeguard import typechecked
+from typing import Optional, Union, List
+
+
+## From tensorflow_addons
+
+from packaging.version import Version
+
+# Find KerasTensor.
+if Version(tf.__version__).release >= Version("2.16").release:
+    # Determine if loading keras 2 or 3.
+    if (
+        hasattr(tf.keras, "version")
+        and Version(tf.keras.version()).release >= Version("3.0").release
+    ):
+        from keras import KerasTensor
+    else:
+        from tf_keras.src.engine.keras_tensor import KerasTensor
+elif Version(tf.__version__).release >= Version("2.13").release:
+    from keras.src.engine.keras_tensor import KerasTensor
+elif Version(tf.__version__).release >= Version("2.5").release:
+    from keras.engine.keras_tensor import KerasTensor
+else:
+    from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+
+## From tensorflow_addons
+Number = Union[
+    float,
+    int,
+    np.float16,
+    np.float32,
+    np.float64,
+    np.int8,
+    np.int16,
+    np.int32,
+    np.int64,
+    np.uint8,
+    np.uint16,
+    np.uint32,
+    np.uint64,
+]
+TensorLike = Union[
+    List[Union[Number, list]],
+    tuple,
+    Number,
+    np.ndarray,
+    tf.Tensor,
+    tf.SparseTensor,
+    tf.Variable,
+    KerasTensor,
+]
+FloatTensorLike = Union[tf.Tensor, float, np.float16, np.float32, np.float64]
+AcceptableDTypes = Union[tf.DType, np.dtype, type, int, str, None]
+
+## From tensorflow_addons
+def pairwise_distance(feature: TensorLike, squared: bool = False):
+    """Computes the pairwise distance matrix with numerical stability.
+
+    output[i, j] = || feature[i, :] - feature[j, :] ||_2
+
+    Args:
+      feature: 2-D Tensor of size `[number of data, feature dimension]`.
+      squared: Boolean, whether or not to square the pairwise distances.
+
+    Returns:
+      pairwise_distances: 2-D Tensor of size `[number of data, number of data]`.
+    """
+    pairwise_distances_squared = tf.math.add(
+        tf.math.reduce_sum(tf.math.square(feature), axis=[1], keepdims=True),
+        tf.math.reduce_sum(
+            tf.math.square(tf.transpose(feature)), axis=[0], keepdims=True
+        ),
+    ) - 2.0 * tf.matmul(feature, tf.transpose(feature))
+
+    # Deal with numerical inaccuracies. Set small negatives to zero.
+    pairwise_distances_squared = tf.math.maximum(pairwise_distances_squared, 0.0)
+    # Get the mask where the zero distances are at.
+    error_mask = tf.math.less_equal(pairwise_distances_squared, 0.0)
+
+    # Optionally take the sqrt.
+    if squared:
+        pairwise_distances = pairwise_distances_squared
+    else:
+        pairwise_distances = tf.math.sqrt(
+            pairwise_distances_squared
+            + tf.cast(error_mask, dtype=tf.dtypes.float32) * 1e-16
+        )
+
+    # Undo conditionally adding 1e-16.
+    pairwise_distances = tf.math.multiply(
+        pairwise_distances,
+        tf.cast(tf.math.logical_not(error_mask), dtype=tf.dtypes.float32),
+    )
+
+    num_data = tf.shape(feature)[0]
+    # Explicitly set diagonals to zero.
+    mask_offdiagonals = tf.ones_like(pairwise_distances) - tf.linalg.diag(
+        tf.ones([num_data])
+    )
+    pairwise_distances = tf.math.multiply(pairwise_distances, mask_offdiagonals)
+    return pairwise_distances
+
+## From tensorflow_addons
+def is_tensor_or_variable(x):
+    return tf.is_tensor(x) or isinstance(x, tf.Variable)
+
+class LossFunctionWrapper(tf.keras.losses.Loss):
+    """Wraps a loss function in the `Loss` class."""
+
+    def __init__(
+        self, fn, reduction=tf.keras.losses.Reduction.AUTO, name=None, **kwargs
+    ):
+        """Initializes `LossFunctionWrapper` class.
+
+        Args:
+          fn: The loss function to wrap, with signature `fn(y_true, y_pred,
+            **kwargs)`.
+          reduction: (Optional) Type of `tf.keras.losses.Reduction` to apply to
+            loss. Default value is `AUTO`. `AUTO` indicates that the reduction
+            option will be determined by the usage context. For almost all cases
+            this defaults to `SUM_OVER_BATCH_SIZE`. When used with
+            `tf.distribute.Strategy`, outside of built-in training loops such as
+            `tf.keras` `compile` and `fit`, using `AUTO` or `SUM_OVER_BATCH_SIZE`
+            will raise an error. Please see this custom training [tutorial](
+              https://www.tensorflow.org/tutorials/distribute/custom_training)
+            for more details.
+          name: (Optional) name for the loss.
+          **kwargs: The keyword arguments that are passed on to `fn`.
+        """
+        super().__init__(reduction=reduction, name=name)
+        self.fn = fn
+        self._fn_kwargs = kwargs
+
+    def call(self, y_true, y_pred):
+        """Invokes the `LossFunctionWrapper` instance.
+
+        Args:
+          y_true: Ground truth values.
+          y_pred: The predicted values.
+
+        Returns:
+          Loss values per sample.
+        """
+        return self.fn(y_true, y_pred, **self._fn_kwargs)
+
+    def get_config(self):
+        config = {}
+        for k, v in iter(self._fn_kwargs.items()):
+            config[k] = tf.keras.backend.eval(v) if is_tensor_or_variable(v) else v
+        base_config = super().get_config()
+        return {**base_config, **config}
+
+
+## From tensorflow_addons
+def lifted_struct_loss(
+    labels: TensorLike, embeddings: TensorLike, margin: FloatTensorLike = 1.0
+) -> tf.Tensor:
+    """Computes the lifted structured loss.
+
+    Args:
+      labels: 1-D tf.int32 `Tensor` with shape `[batch_size]` of
+        multiclass integer labels.
+      embeddings: 2-D float `Tensor` of embedding vectors. Embeddings should
+        not be l2 normalized.
+      margin: Float, margin term in the loss definition.
+
+    Returns:
+      lifted_loss: float scalar with dtype of embeddings.
+    """
+    convert_to_float32 = (
+        embeddings.dtype == tf.dtypes.float16 or embeddings.dtype == tf.dtypes.bfloat16
+    )
+    precise_embeddings = (
+        tf.cast(embeddings, tf.dtypes.float32) if convert_to_float32 else embeddings
+    )
+
+    # Reshape [batch_size] label tensor to a [batch_size, 1] label tensor.
+    lshape = tf.shape(labels)
+    labels = tf.reshape(labels, [lshape[0], 1])
+
+    # Build pairwise squared distance matrix.
+    pairwise_distances = pairwise_distance(precise_embeddings)
+
+    # Build pairwise binary adjacency matrix.
+    adjacency = tf.math.equal(labels, tf.transpose(labels))
+    # Invert so we can select negatives only.
+    adjacency_not = tf.math.logical_not(adjacency)
+
+    batch_size = tf.size(labels)
+
+    diff = margin - pairwise_distances
+    mask = tf.cast(adjacency_not, dtype=tf.dtypes.float32)
+    # Safe maximum: Temporarily shift negative distances
+    #   above zero before taking max.
+    #     this is to take the max only among negatives.
+    row_minimums = tf.math.reduce_min(diff, 1, keepdims=True)
+    row_negative_maximums = (
+        tf.math.reduce_max(
+            tf.math.multiply(diff - row_minimums, mask), 1, keepdims=True
+        )
+        + row_minimums
+    )
+
+    # Compute the loss.
+    # Keep track of matrix of maximums where M_ij = max(m_i, m_j)
+    #   where m_i is the max of alpha - negative D_i's.
+    # This matches the Caffe loss layer implementation at:
+    #   https://github.com/rksltnl/Caffe-Deep-Metric-Learning-CVPR16/blob/0efd7544a9846f58df923c8b992198ba5c355454/src/caffe/layers/lifted_struct_similarity_softmax_layer.cpp
+
+    max_elements = tf.math.maximum(
+        row_negative_maximums, tf.transpose(row_negative_maximums)
+    )
+    diff_tiled = tf.tile(diff, [batch_size, 1])
+    mask_tiled = tf.tile(mask, [batch_size, 1])
+    max_elements_vect = tf.reshape(tf.transpose(max_elements), [-1, 1])
+
+    loss_exp_left = tf.reshape(
+        tf.math.reduce_sum(
+            tf.math.multiply(tf.math.exp(diff_tiled - max_elements_vect), mask_tiled),
+            1,
+            keepdims=True,
+        ),
+        [batch_size, batch_size],
+    )
+
+    loss_mat = max_elements + tf.math.log(loss_exp_left + tf.transpose(loss_exp_left))
+    # Add the positive distance.
+    loss_mat += pairwise_distances
+
+    mask_positives = tf.cast(adjacency, dtype=tf.dtypes.float32) - tf.linalg.diag(
+        tf.ones([batch_size])
+    )
+
+    # *0.5 for upper triangular, and another *0.5 for 1/2 factor for loss^2.
+    num_positives = tf.math.reduce_sum(mask_positives) / 2.0
+
+    lifted_loss = tf.math.truediv(
+        0.25
+        * tf.math.reduce_sum(
+            tf.math.square(
+                tf.math.maximum(tf.math.multiply(loss_mat, mask_positives), 0.0)
+            )
+        ),
+        num_positives,
+    )
+
+    if convert_to_float32:
+        return tf.cast(lifted_loss, embeddings.dtype)
+    else:
+        return lifted_loss
+    
+class LiftedStructLoss(LossFunctionWrapper):
+    """Computes the lifted structured loss.
+
+    The loss encourages the positive distances (between a pair of embeddings
+    with the same labels) to be smaller than any negative distances (between
+    a pair of embeddings with different labels) in the mini-batch in a way
+    that is differentiable with respect to the embedding vectors.
+    See: https://arxiv.org/abs/1511.06452.
+
+    Args:
+      margin: Float, margin term in the loss definition.
+      name: Optional name for the op.
+    """
+
+    @typechecked
+    def __init__(
+        self, margin: FloatTensorLike = 1.0, name: Optional[str] = None, **kwargs
+    ):
+        super().__init__(
+            lifted_struct_loss,
+            name=name,
+            reduction=tf.keras.losses.Reduction.NONE,
+            margin=margin,
+        )
 
 class CenteredGaussianNoise(tf.keras.layers.Layer):
     """Apply additive non zero-centered Gaussian noise.
@@ -31,12 +295,12 @@ class CenteredGaussianNoise(tf.keras.layers.Layer):
     def call(self, inputs, training=None):
 
         def noised():
-            return inputs + backend.random_normal(
+            return inputs + tf.keras.backend.random_normal(
                 shape=tf.shape(inputs),
                 mean=self.center,
                 stddev=self.stddev,
             )
-        return backend.in_train_phase(noised, inputs, training=training)
+        return tf.keras.backend.in_train_phase(noised, inputs, training=training)
 
     def get_config(self):
         config = {'center': self.center,
@@ -69,8 +333,7 @@ class OneCycleLearningRate(tf.keras.callbacks.Callback):
             rate = self._interpolate(2 * self.half_iteration, self.iterations,
                                      self.start_rate, self.last_rate)
         self.iteration += 1
-        backend.set_value(self.model.optimizer.learning_rate, rate)
-
+        tf.keras.backend.set_value(self.model.optimizer.learning_rate, rate)
 
 def onecycle_lr(eta0, n_epochs, n_drop, model):
     '''One cycle learning rate function with a linear ramp-up, linear, ramp-down, and drop in n_drop epoch
@@ -82,15 +345,15 @@ def onecycle_lr(eta0, n_epochs, n_drop, model):
 
     def onecycle_lr_fn(epoch, lr):
         if epoch <= n_epochs / 2:
-            lr0 = backend.get_value(model.optimizer.learning_rate)
+            lr0 = tf.keras.backend.get_value(model.optimizer.learning_rate)
             inc = 18 * eta0 / n_epochs
             return (lr0 + inc)
         elif epoch > n_epochs / 2 and epoch <= n_epochs - n_drop:
-            lr0 = backend.get_value(model.optimizer.learning_rate)
+            lr0 = tf.keras.backend.get_value(model.optimizer.learning_rate)
             dec = (9 * eta0) / (n_epochs / 2 - n_drop)
             return (lr0 - dec)
         else:
-            lr0 = backend.get_value(model.optimizer.learning_rate)
+            lr0 = tf.keras.backend.get_value(model.optimizer.learning_rate)
             sharp_dec = 0.9 * eta0 / 5
             return (lr0 - sharp_dec)
 
@@ -102,16 +365,15 @@ class OneCycleMomentumCallback(tf.keras.callbacks.Callback):
         self.n_drop = n_drop
     def on_epoch_end(self, epoch, logs=None):
         if epoch <= self.n_epochs/2:
-            m0 = backend.get_value(self.model.optimizer.beta_1)
+            m0 = tf.keras.backend.get_value(self.model.optimizer.beta_1)
             dec = 0.2 / self.n_epochs
-            backend.set_value(self.model.optimizer.beta_1, (m0 - dec))
+            tf.keras.backend.set_value(self.model.optimizer.beta_1, (m0 - dec))
         elif epoch > self.n_epochs/2 and epoch <= self.n_epochs - self.n_drop:
-            m0 = backend.get_value(self.model.optimizer.beta_1)
+            m0 = tf.keras.backend.get_value(self.model.optimizer.beta_1)
             inc = 0.1 / (self.n_epochs/2 - self.n_drop)
-            backend.set_value(self.model.optimizer.beta_1, (m0 + inc))
+            tf.keras.backend.set_value(self.model.optimizer.beta_1, (m0 + inc))
         else:
-            backend.set_value(self.model.optimizer.beta_1, 0.95)
-
+            tf.keras.backend.set_value(self.model.optimizer.beta_1, 0.95)
 
 def exponential_decay(lr0, s):
     """Exponential decay function from HOML"""
@@ -123,7 +385,6 @@ def decayed_learning_rate(lr0, s):
     def decayed_learning_rate_fn(epoch):
         return lr0 / (1 + epoch / s)
     return decayed_learning_rate_fn
-
 
 class DenseTranspose(tf.keras.layers.Layer):
     def __init__(self, dense, activation=None, kernel_initializer=None, kernel_regularizer=None, **kwargs):
@@ -142,58 +403,6 @@ class DenseTranspose(tf.keras.layers.Layer):
         z = tf.matmul(inputs, self.dense.weights[0], transpose_b=True)
         return self.activation(z + self.biases)
 
-
-def monotonic(x):
-    sorted = x.sort_values(ascending=False).index
-    return np.array_equal(sorted.values, ['A', 'C', 'D', 'B']) or np.array_equal(sorted.values, ['B', 'D', 'C', 'A'])
-
-
-def assess_monotonicity(data, metadata):
-    """Returns percentage of genes that follow titration monotonicity -
-    higher is better"""
-    data['sample'] = metadata.loc[data.index, 'seqc_sample']
-    grouped = data.groupby('sample').mean()
-    data.drop('sample', inplace=True, axis=1)
-
-    return grouped.apply(monotonic, axis=0).mean()
-
-
-def assess_sem(data, metadata):
-    """mean SEM across technical replicates <10% - returns percentage of genes (higher is better)"""
-    data['sample'] = metadata.loc[data.index, 'seqc_sample']
-    grouped_mean = data.groupby('sample').mean()
-    grouped_sem = data.groupby('sample').sem()
-    sem_mean = grouped_sem.div(grouped_mean).mean()
-    data.drop('sample', inplace=True, axis=1)
-
-    return np.mean(sem_mean < 0.1)
-
-
-def expected_behavior(x, z=1.43):
-    k1 = 3 * z / (3 * z + 1)
-    k2 = z / (z + 3)
-
-    t1 = k1 * (x['A'] / x['B']) + (1 - k1)
-    t2 = k2 * (x['A'] / x['B']) + (1 - k2)
-    return np.log(t1) - np.log(t2)
-
-
-def assess_behavior(data, metadata):
-    """% of genes where deviation less than expected behavior
-    (SEQC/MAQC-III Consortium, 2014, Nat Biotech;Shippy, 2006, Nat Biotech)"""
-    data['sample'] = metadata.loc[data.index, 'seqc_sample']
-    grouped_mean = data.groupby('sample').mean()
-    # remove genes where mean for one group is zero
-    grouped_zeros = grouped_mean.apply(lambda x: all(x > 0))
-    # add minimum value so that latent space assessment has no zeros
-    grouped_meanz = grouped_mean.loc[:, grouped_zeros]+np.min(grouped_mean.values)
-
-    logcd = grouped_meanz.apply(lambda x: np.log(x['C'] / x['D'])).reindex()
-    logab = grouped_meanz.apply(expected_behavior, axis=0).reindex()
-    data.drop('sample', inplace=True, axis=1)
-
-    return np.mean([logab[i] * 0.9 <= logcd[i] <= logab[i] * 1.1 for i in logab.index])
-
 def build_autoencoder(train, valid, config):
     """Build autoencoder with parameters in the configdict"""
     # calculate layers
@@ -203,107 +412,56 @@ def build_autoencoder(train, valid, config):
         raise Exception('Number of input features smaller than number of latent features')
     enc_layers = layered * layers_scaling + config['nlatent']
 
-    # gaussian noise layer setup with mean 0.5
-    # centered_gaussian_noise_layer = tf.keras.layers.Lambda(lambda x: x + tf.random.normal(tf.shape(x),
-    #                                                                                    mean=0.5,
-    #                                                                                    stddev=config[
-    #                                                                                        'noise_std'],
-    #                                                                                    dtype=x.dtype))
+    enc = tf.keras.models.Sequential(name='encoder')
 
-    enc = Sequential(name='encoder')
-
-    enc.add(Dropout(config['dropout_rate'], input_shape=(train.shape[1],)))
-    if config['noise']:
-        # enc.add(centered_gaussian_noise_layer)
+    enc.add(tf.keras.layers.Dropout(config['dropout_rate'], input_shape=(train.shape[1],)))
+    if config['noise'] == 'True':
         enc.add(CenteredGaussianNoise(center=0, stddev=config['noise_std']))
 
     enc_list = []
     for i in range(config['nlayers']):
-        enc_list.append(Dense(units=enc_layers[i], activation="elu",
+        enc_list.append(tf.keras.layers.Dense(units=enc_layers[i], activation="elu",
                               kernel_initializer="he_normal",
                               kernel_regularizer=tf.keras.regularizers.l2(config['l2reg'])))
         enc.add(enc_list[i])
-        if (config['batchnorm']):
-            enc.add(BatchNormalization())
+        if (config['batchnorm'] == "True"):
+            enc.add(tf.keras.layers.BatchNormalization())
 
-    dec = Sequential(name='decoder')
+    dec = tf.keras.models.Sequential(name='decoder')
 
     # DenseTranspose links weights to weights of encoder (see pp 577 HOML)
     for i in range(1, config['nlayers']):
         dec.add(DenseTranspose(enc_list[-i], activation="elu",
                                   kernel_initializer="he_normal",
                                   kernel_regularizer=tf.keras.regularizers.l2(config['l2reg'])))
-        if (config['batchnorm']):
-            dec.add(BatchNormalization())
+        if (config['batchnorm'] == "True"):
+            dec.add(tf.keras.layers.BatchNormalization())
     dec.add(DenseTranspose(enc_list[-config['nlayers']], activation="sigmoid"))
 
     return tf.keras.models.Sequential([enc, dec])
 
-def run_autoencoder(datapath, datarun, dataprefix, config, metafile, outputdir):
-    x_train = pd.read_csv(datapath / (datarun + '-train' + dataprefix + ".csv"),
-                          index_col=0).astype(
-        'float32')
-    x_valid = pd.read_csv(datapath / (datarun + '-valid' + dataprefix + ".csv"),
-                          index_col=0).astype(
-        'float32')
+def build_contrastiverep(train, valid, config):
+    """Build contrastive representation learning model with parameters in the configdict"""
+    # calculate layers
+    layered = pd.Series(reversed(range(config['nlayers'])))
+    layers_scaling = ((config['nfeatures'] - config['nlatent']) / config['nlayers'])
+    if (layers_scaling < 0):
+        raise Exception('Number of input features smaller than number of latent features')
+    enc_layers = layered * layers_scaling + config['nlatent']
 
-    metadata = pd.read_csv(datapath / metafile, index_col=0, sep='\t')
+    enc = tf.keras.models.Sequential(name='encoder')
 
-    feature_order = x_train.var(axis=0).sort_values(ascending=False).index
+    enc.add(tf.keras.layers.Dropout(config['dropout_rate'], input_shape=(train.shape[1],)))
+    if config['noise'] == 'True':
+        enc.add(CenteredGaussianNoise(center=0, stddev=config['noise_std']))
 
-    features = feature_order[0:config['nfeatures']]
-    train = x_train.loc[:, features]
-    valid = x_valid.loc[:, features]
+    enc_list = []
+    for i in range(config['nlayers']):
+        enc_list.append(tf.keras.layers.Dense(units=enc_layers[i], activation="elu",
+                              kernel_initializer="he_normal",
+                              kernel_regularizer=tf.keras.regularizers.l2(config['l2reg'])))
+        enc.add(enc_list[i])
+        if (config['batchnorm'] == "True"):
+            enc.add(tf.keras.layers.BatchNormalization())
 
-
-    model = build_autoencoder(train, valid, config)
-
-    model.compile(loss=tf.keras.losses.mean_squared_error,
-                  optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
-
-    # assume power scheduler
-    lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-        decayed_learning_rate(lr0=config['lr'], s=config['s']))
-    callbacks = [lr_scheduler]
-
-
-    history = model.fit(train, train,
-                        batch_size=config['batchsize'],
-                        epochs=1000,
-                        verbose=0,
-                        callbacks=callbacks,
-                        validation_data=(valid, valid))
-
-    # mean loss since model is sum of individual
-    train_score = model.evaluate(train, train, verbose=0) / config['nfeatures']
-    valid_score = model.evaluate(valid, valid, verbose=0) / config['nfeatures']
-
-    latent = tf.keras.Model(inputs=[model.layers[0].input], outputs=[model.layers[0].output])
-    val = latent.predict(valid)
-
-    # Calculate the SEQC-specific metrics
-    latent_val = pd.DataFrame(val, index=valid.index)
-    monotonicity = 1 - assess_monotonicity(latent_val, metadata)
-    sems = 1 - assess_sem(latent_val, metadata)
-    try:
-        expected_behavior = 1 - assess_behavior(latent_val, metadata)
-    except:
-
-        expected_behavior = None
-
-    metricsdict = {
-        'valid loss': valid_score,
-        'train loss': train_score
-    }
-    
-    model.save(Path(outputdir) / "model")
-
-    return history, model, features
-
-def prefix_to_scaling(prefix):
-    if ('sm' in prefix) or ('ss' in prefix):
-        return 'Feature-wise'
-    elif ('gm' in prefix) or ('gs' in prefix):
-        return 'Global'
-
-
+    return tf.keras.models.Sequential([enc])

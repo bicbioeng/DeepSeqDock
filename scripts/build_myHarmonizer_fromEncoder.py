@@ -69,11 +69,11 @@ else:
     raise KeyError(scale + ' is not one of none, feature, or global')
 
 # Identify dataset locations
-doi = glob.glob((Path(args.output_directory) / 'Data Representations' / 'Autoencoder' /
+doi = glob.glob((Path(args.output_directory) / 'Data Representations' / 'Encoder' /
                  args.autoencoder / (args.autoencoder + "*.csv")).as_posix())
 if args.meta:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / args.autoencoder).as_posix() + '" -p "' +
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.autoencoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path +
                '" -m "' + args.meta + '" --datetime ' +
@@ -81,7 +81,7 @@ if args.meta:
                '" "'.join(doi) + '" -o "' + args.output_directory + '"'))
 else:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / args.autoencoder).as_posix() + '" -p "' +
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.autoencoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path + '" --datetime ' +
                 dt + ' -d "' +

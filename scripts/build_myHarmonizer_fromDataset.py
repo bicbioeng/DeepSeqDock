@@ -107,7 +107,7 @@ elif args.featureselection == 'impurity':
 else:
     raise ValueError("Feature selection method can only be variance or impurity.")
 
-print(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
+print(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
@@ -117,7 +117,7 @@ print(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_op
            args.scheduler + ' --datetime ' +
            dt))
 
-os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/autoencoder_optimization.py -d "' +
+os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
@@ -165,7 +165,7 @@ else:
 
 if args.meta:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / (
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / (
                            'autoencoder_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
@@ -175,7 +175,7 @@ if args.meta:
                ))
 else:
     os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Autoencoder' / (
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / (
                            'autoencoder_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
