@@ -1,5 +1,17 @@
 # DeepSeqDock: Framework for building optimized autoencoders for RNA sequencing data harmonization.
 
+---
+
+## **Table of Contents**
+1. [Overview](#overview)
+2. [Installation](#installation)
+3. [Quick start](#quick-start)
+4. [Input and Output Formats](#input-and-output-formats)
+5. [Example Workflow](#example-workflow)
+6. [Citations and Licensing](#citations-and-licensing)
+
+---
+
 ## Overview
 
 The advent of high-throughput RNA-sequencing has led to the development of vast databases of sample transcriptomic data. A number of existing projects have sought to bring this data to a more unified representation to facilitate harmonization of multi-institutional RNA-sequencing datasets by unified quality control and mapping pipelines. The output of these efforts is useful for such downstream applications as machine learning and similarity assessment between samples. 
@@ -47,7 +59,7 @@ then run the container interactively:
 docker run -it --rm -v "$HOME"/deepseqdockoutput:/app/output deepseqdock
 
 ## Windows
-docker run -it –rm -v “c:\user\username\deepseqdockoutput:/app/myharmonizeroutput” myharmonizerdock
+docker run -it –rm -v “c:\user\username\deepseqdockoutput:/app/output” deepseqdock
 ```
 
 Parameters:
@@ -75,6 +87,40 @@ conda activate DeepSeqDock
 ```
 For Ubuntu version 20.10 and above, it may be necessary to install libffi7_3. The dependency chain with R does not allow for updated versions of python to be used at the time of this writing.
 
+## Input and Output Formats
+
+### Supported Input Formats
+- FASTA
+- FASTQ
+- CSV
+
+### Output Formats
+- Processed data: CSV, JSON
+
+### Train/Validation/Test Data Schema
+The train, validation, and test datasets should adhere to the following schema:
+
+| Column Name     | Data Type   | Description                                 |
+|------------------|-------------|---------------------------------------------|
+| Empty     | String      | Unique identifier for each sample.          |
+| `feature_1`     | Int       | Value for the first feature.                |
+| `feature_2`     | Int       | Value for the second feature.               |
+| ...             | ...         | Additional features as columns.             |
+
+Samples are represented as rows, and features are represented as columns.
+
+### Metadata Data Schema
+The metadata file should contain the following structure, the data type of each characteristic is catergory:
+
+| Column Name     | Data Type   | Description                                 |
+|------------------|-------------|---------------------------------------------|
+| Empty     | String      | Unique identifier for each sample.          |
+| `characteristic_1` | String   | Metadata characteristic (e.g., condition).  |
+| `characteristic_2` | String   | Additional metadata (e.g., source, group).  |
+| ...             | ...         | Additional features as columns.             |
+
+The first column names the samples, and subsequent columns provide associated metadata.
+
 ## Quick start
 
 This function will run normalization, scaling, and autoencoder optimization steps and assemble a myHarmonizer object from the result. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation and test datasets should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. A sample metadata file with samples as rows and categorical features as columns may also be supplied. Default normalization is QT and scaling is feature min-max scaling.
@@ -92,9 +138,20 @@ To run the workflow with a toy dataset (and toy autoencoder optimization setting
 ```shell
 python scripts/build_myHarmonizer_fromDataset.py -d supporting/train.csv -v supporting/valid.csv -m supporting/meta.csv --min_budget 10 --max_budget 100 --n_iterations 2
 ```
+### **Arguments**
+| Argument        | Description                                    | Default         |
+|------------------|------------------------------------------------|-----------------|
+| `--train_data`/`-d`       | Path to training data csv. Required.           | None (required) |
+| `--valid_data`/`-v`      | Path to validation data csv. Required.         | None (required)  |
+| `--test_data`/`-t`     | Path to validation data csv. Required.      | None (required)       |
+| `--meta`/`-m`      | Path to metadata csv. Required if running feature selection.      | None            |
+| `--output_directory`/`o`       | Directory to which output will be written           | `output` |
+| `--min_budget`      | Min number of epochs for training         | `100`  |
+| `--max_budget`     | Max number of epochs for training      | `2000`       |
+| `--n_iterations`      | Number of iterations performed by the optimizer      | `20`            |
 
-
-## 1) Local ARCHS4
+## Example Workflow
+### 1) Local ARCHS4
 
 To run the local ARCHS4 pipeline, FASTQ files for each sample should be placed inside of unique folders. It is assumed that paired-end reads will have two FASTQ files and single-end reads will have a single FASTQ file. All sample folders should be kept inside one folder (e.g. sampledir) that will be the input for the script. If dumping FASTQ files from the SRA, it is recommended that the flags --concatenate-reads --include-technical are included since the original ARCHS4 pipeline was run with the fastq-dump utility instead of fasterq-dump (see bottom of [fasterq-dump documentation](https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump).
 
@@ -110,7 +167,7 @@ Sample FASTQ files have been provided in the 'supporting' folder for testing. Fo
 scripts/local_archs4.sh -d supporting/fastq -i true
 ```
 
-## 2) Normalization and scaling
+### 2) Normalization and scaling
 
 The purpose of this module is to normalize and scale input data, and provide frozen parameters for these preprocessing methods so that they can be reproduced afterwards. After uniform aligment (e.g. ARCHS4 pipeline), count data matrices should be arranged as csv files with samples as rows and gene features as columns. To fully test the harmonization workflow, validation (and test) dataset(s) should be split from the training dataset before normalization and scaling. When dealing with large multi-institutional datasets, it is recommended that validation (test) datasets contain samples from unique origins, when appropriate. 
 
@@ -132,7 +189,7 @@ Sample train, validation, and test csv files have been made available in the 'su
 python scripts/normalize_scale.py -d supporting/train.csv -t supporting/test.csv supporting/valid.csv --datetime 1900_01_01-00_00_00
 ```
 
-## 3) Optimize and build autoencoder
+### 3) Optimize and build autoencoder
 
 <span style="color:red">This module may run a long time (hours) with default parameters!</span>
 
@@ -149,10 +206,15 @@ In general, the higher the n_iterations the better, because each iteration gives
 The sample data in the supporting folder can again be used to test this function. When running actual data, it is not recommended to cut the min_budget, max_budget, and n_iterations this low. Datetime need not be included for a typical run and will be set to the run datetime.
 
 ```shell
-python scripts/autoencoder_optimization.py -d "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" -v "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" -t "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" --min_budget 10 --max_budget 100 --n_iterations 2 --datetime 2000_01_01-00_00_00
+python scripts/autoencoder_optimization.py -d \
+"output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" \ 
+-v "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" \ 
+-t "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" \
+-m supporting/meta.csv \
+--min_budget 10 --max_budget 100 --n_iterations 2 --datetime 2000_01_01-00_00_00
 ```
 
-## 4) Categorical Evaluation
+### 4) Categorical Evaluation
 
 This module is intended to use sample metadata to evaluate the meaningfulness of the data representation with regards to continuous similarity metrics and downstream classification machine learning models. To run this module, test (validation) csv(s) should be provided as well as a csv with samples as rows and columns as categorial (nominal) sample characteristics. Examples of this type of sample metadata may be disease state, tissue of origin, etc. Detailed descriptions of arguments are available as:
 
@@ -160,7 +222,7 @@ This module is intended to use sample metadata to evaluate the meaningfulness of
 python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/test.csv -m supporting/meta.csv
 ```
 
-## 5) Build myHarmonizer Object
+### 5) Build myHarmonizer Object
 
 This final module utilizes the outputs from normalization, scaling, and autoencoder transformations to build a myHarmonizer object, that can be input into the myHarmonizer python package or web application to transform new datasets that fall within the domain of the knowledge base datasets into the same condensed data representation as the output from the autoencoder. Assuming that the output directory tree has been kept intact during the running of the normalization and autoencoder modules, a convenience script has been written to automatically pull all of the necessary data and models based on the name of the autoencoder of interest (can be found at the end of the autoencoder optimization script). If output directory is not located in the current working directory, then the output folder should also be supplied.
 
