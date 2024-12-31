@@ -22,6 +22,9 @@ import seaborn as sns
 from scipy import stats
 import warnings
 
+from pybiomart import Server
+from sklearn.model_selection import train_test_split
+
 # r_deseq2 = importr('DESeq2')
 # r_base = importr('base')
 
@@ -394,3 +397,73 @@ def quantile_floorcap(datas, floor=0.05, ceiling=0.95):
 #     return_code = popen.wait()
 #     if return_code:
 #         raise subprocess.CalledProcessError(return_code, cmd)
+
+#Tuyen Do
+def get_file_type_by_extension(file_path):
+    """
+    Returns 'csv' if the file extension is .csv, 
+    'tsv' if the extension is .tsv, or None otherwise.
+    """
+    _, extension = os.path.splitext(file_path.lower())
+    if extension == '.csv':
+        return 'csv'
+    elif extension == '.tsv':
+        return 'tsv'
+    else:
+        return None
+    
+def extract_ensembl_ids(annotation_file_path):
+    "Extract the ensembl ID (ensembl.org) by table annotation NCBI"
+    # Replace this list with your ensembl Gene IDs of interest
+    if get_file_type_by_extension(annotation_file_path) == 'tsv':
+        df = pd.read_csv(annotation_file_path, delimiter="\t")
+    elif get_file_type_by_extension(annotation_file_path) == 'csv':
+        df = pd.read_csv(annotation_file_path)
+    else:
+        raise ValueError(f"File '{annotation_file_path}' is not recognized as CSV or TSV.")
+    df_filtered_ensembl_ids = df[df['EnsemblGeneID'].notna()]
+    return list(df_filtered_ensembl_ids['EnsemblGeneID'].values)
+
+def gene_length(ensembl_ids):
+    "Extract the gene length from ensembl.org by matching ensembl ID"
+    chunk_size = 100
+    # 1. Connect to the Ensembl BioMart server
+    server = Server(host='http://www.ensembl.org')
+
+    # 2. Select the Ensembl Genes mart
+    mart = server['ENSEMBL_MART_ENSEMBL']
+
+    # 3. Choose the human gene dataset
+    dataset = mart['hsapiens_gene_ensembl']
+
+    results = []
+    for start_idx in range(0, len(ensembl_ids), chunk_size):
+        # Select the chunk of data
+        chunk = ensembl_ids[start_idx:start_idx + chunk_size]
+        result_df = dataset.query(
+            attributes=[
+                "ensembl_gene_id",
+                "entrezgene_id",
+                "ensembl_transcript_id",
+                "transcript_length"
+            ],
+            filters={
+                "link_ensembl_gene_id": chunk,
+                "transcript_is_canonical": True
+            }
+        )
+        results.append(result_df)
+    return pd.concat(results, ignore_index=True)
+
+def ncbi_geo_prepration(count_matrix_csv_file: str, meta_data_csv_file: str, catergories: list, train_test_valid_ratio=[0.6,0.2,0.2]):
+    data = pd.read_csv(count_matrix_csv_file)
+    data = data.set_index(data.columns[0])
+    data = data.transpose()
+    train_data, temp_data = train_test_split(data, test_size=1-train_test_valid_ratio[0], random_state=42)
+    valid_data, test_data = train_test_split(temp_data, test_size=train_test_valid_ratio[1]/(1-train_test_valid_ratio[0]), random_state=42)
+
+    metadata = pd.read_csv(meta_data_csv_file)
+    metadata = metadata[['Sample Name'] + catergories]
+    metadata_deduplicated = metadata.drop_duplicates(subset='Sample Name', keep='first')
+
+    return train_data, valid_data, test_data, metadata_deduplicated

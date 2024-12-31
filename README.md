@@ -103,11 +103,13 @@ The train, validation, and test datasets should adhere to the following schema:
 | Column Name     | Data Type   | Description                                 |
 |------------------|-------------|---------------------------------------------|
 | Empty     | String      | Unique identifier for each sample.          |
-| `feature_1`     | Int       | Value for the first feature.                |
-| `feature_2`     | Int       | Value for the second feature.               |
-| ...             | ...         | Additional features as columns.             |
+| `gene_id_1`     | Int       | Value for the gene 1 expression count.                |
+| `gene_id_2`     | Int       | Value for the gene 2 expression count.               |
+| ...             | ...         | Additional gene expression count as columns.             |
 
-Samples are represented as rows, and features are represented as columns.
+Note:
+ - Each row corresponds to a single sample.
+ - The feature columns (feature_1, feature_2, etc.) correspond to Ensembl gene IDs, which use the format ENSG********** (e.g., ENSG00000123456). Each column holds the integer value (e.g., expression count) for that specific gene.
 
 ### Metadata Data Schema
 The metadata file should contain the following structure, the data type of each characteristic is catergory:
