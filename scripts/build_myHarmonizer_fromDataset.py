@@ -17,6 +17,8 @@ parser.add_argument('-m', '--meta', type=str,
                     help='Path to metadata csv. Named samples as first row and characteristic metadata as columns. Required if running feature selection.')
 parser.add_argument('-o', '--output_directory', type=str,
                     help='Directory to which output will be written', default='output')
+parser.add_argument('-mt', '--modeltype', type=str,
+                    help='Type of encoder model to use. Options are: autoencoder, contrastiverepresentation', default='autoencoder')
 parser.add_argument('-g', '--gene_length', type=str,
                     help='Path to gene length csv. Necessary only if wish to run all, GeTMM, or GeVST preprocessing.'
                          ' Default is effective gene lengths from an outside sample mapped by Kallisto.',
@@ -119,7 +121,8 @@ print(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimi
 
 os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
-           args.output_directory + '" --min_budget ' +
+           args.output_directory + '" --modeltype ' +
+           args.modeltype + ' --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
            str(args.max_budget) + ' --n_iterations ' +
            str(args.n_iterations) + ' --scheduler ' +
