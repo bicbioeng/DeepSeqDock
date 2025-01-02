@@ -1,15 +1,24 @@
 # Default autoencoder optimization - does not contain any dataset specific evaluations
 
+import logging
+import matplotlib.font_manager
+
+# Suppress findfont messages
+logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
+import matplotlib
+matplotlib.use('Agg')  # Must be before importing matplotlib.pyplot or pylab
+import matplotlib.pyplot as plt
+
 import os
 import json
 import argparse
 import time
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 import encoder as ec
+import tensorflow as tf
+import pandas as pd
+import numpy as np
 
 import hpbandster.core.nameserver as hpns
 import hpbandster.core.result as hpres
@@ -19,13 +28,11 @@ from hpbandster.core.worker import Worker
 import ConfigSpace as CS
 import ConfigSpace.hyperparameters as CSH
 
-import tensorflow as tf
-
 import sklearn.ensemble as ensemble
 
-import matplotlib
-matplotlib.use('Agg') # Must be before importing matploblib.pyplot or pylab (see https://stackoverflow.com/questions/4706451/how-to-save-a-figure-remotely-with-pylab/4706614#4706614)
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg') # Must be before importing matploblib.pyplot or pylab (see https://stackoverflow.com/questions/4706451/how-to-save-a-figure-remotely-with-pylab/4706614#4706614)
+# import matplotlib.pyplot as plt
 
 import hpbandster.visualization as hpvis
 import re
@@ -57,18 +64,41 @@ parser.add_argument('--debug', help='Mode using code in. Debug tests on one rand
 parser.add_argument('--nic_name', type=str, help='Which network interface to use for communication.', default='lo')
 parser.add_argument('--scheduler', type=str, help='Learning rate scheduler. One of 1cycle, 1cycle2, exponential, power',
                     default="power")
-parser.add_argument('--modeltype', type=str, help="autoencoder", default="autoencoder")
+parser.add_argument('--modeltype', type=str, help="Autoencoder or contrastiverepresentation architectures.", default="autoencoder")
 parser.add_argument('--featureselection', type=str, 
-                    help="Method by which features are ranked. Options are variance and impurity where impurity is " 
+                    help="Method by which features are ranked. Options are variance and impurity. Impurity is " 
                     "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
                     default='variance')
 parser.add_argument('--datetime', type=str, help="Used internally to identify runs")
 
 args = parser.parse_args()
 
+def get_callbacks(scheduler, budget, config, x_train, model):
+        if scheduler == '1cycle':
+            onecycle_cb = ec.OneCycleLearningRate(np.ceil(x_train.shape[0] / config['batchsize']) * int(budget),
+                                                  max_rate=config['lr'])
+            callbacks = [onecycle_cb]
+            
+        elif scheduler == '1cycle2':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.onecycle_lr(config['lr'], int(budget), 10, model=model))
+            momentum_scheduler = ec.OneCycleMomentumCallback(int(budget), 10)
+            callbacks = [lr_scheduler, momentum_scheduler]
+            
+        elif scheduler == 'exponential':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.exponential_decay(lr0=config['lr'], s=config['s']))
+            callbacks = [lr_scheduler]
+            
+        elif scheduler == 'power':
+            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
+            ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
+            callbacks = [lr_scheduler]
+        return callbacks
+
 
 class KerasWorker(Worker):
-    def __init__(self, train_data, valid_data, scheduler, modeltype='autoencoder', featureselection='variance', meta=None, **kwargs):
+    def __init__(self, train_data, valid_data, scheduler, modeltype=args.modeltype, featureselection=args.featureselection, meta=args.meta, **kwargs):
         super().__init__(**kwargs)
 
         self.train_data = Path(train_data)
@@ -76,6 +106,7 @@ class KerasWorker(Worker):
         self.modeltype = modeltype
         self.scheduler = scheduler
         self.featureselection = featureselection
+        self.meta = meta
 
         # Load datasets
         self.x_train = pd.read_csv(train_data, index_col=0).astype('float32')
@@ -86,10 +117,11 @@ class KerasWorker(Worker):
             self.feature_order = self.x_train.var(axis=0).sort_values(ascending=False).index
         elif self.featureselection == 'impurity':
             # Order features based on mean decrease in impurity
-            if meta is None:
+            if self.meta is None:
                 raise NameError("Upload metadata if performing feature selection.")
             else:
                 y_train = pd.read_csv(Path(meta), index_col=0)
+                print(y_train.columns[0] + " will be used for categorical variable.")
                 y_train = y_train.loc[self.x_train.index,]
                 
                 forest = ensemble.RandomForestClassifier(random_state=32)
@@ -102,55 +134,56 @@ class KerasWorker(Worker):
 
                 self.feature_order = importances.sort_values(ascending=False).index
 
+    
     def compute(self, config, budget, *args, **kwargs):
 
         # trim features
         train = self.x_train.loc[:, self.feature_order[0:config['nfeatures']]]
         valid = self.x_valid.loc[:, self.feature_order[0:config['nfeatures']]]
 
+
         if self.modeltype == 'autoencoder':
             model = ec.build_autoencoder(train=train, valid=valid,
                                          config=config)
 
-        model.compile(loss=tf.keras.losses.mean_squared_error,
+            model.compile(loss=tf.keras.losses.mean_squared_error,
                       optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
-        
-        if self.scheduler == '1cycle':
-            onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * int(budget),
-                                                      max_rate=config['lr'])
-            callbacks = [onecycle_cb]
             
-        elif self.scheduler == '1cycle2':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-            ec.onecycle_lr(config['lr'], int(budget), 10, model=model))
-            momentum_scheduler = ec.OneCycleMomentumCallback(int(budget), 10)
-            callbacks = [lr_scheduler, momentum_scheduler]
-            
-        elif self.scheduler == 'exponential':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-            ec.exponential_decay(lr0=config['lr'], s=config['s']))
-            callbacks = [lr_scheduler]
-            
-        elif self.scheduler == 'power':
-            lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-            ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
-            callbacks = [lr_scheduler]
-
-        model.fit(train, train,
+            model.fit(train, train,
                   batch_size=config['batchsize'],
                   epochs=int(budget),
                   verbose=0,
-                  callbacks=callbacks,
+                  callbacks=get_callbacks(scheduler=self.scheduler, budget=budget, config=config, x_train=self.x_train, model=model),
                   validation_data=(valid, valid))
-
-        # mean loss since loss of model is the sum of all individual
-        train_score = model.evaluate(train, train, verbose=0)
-        valid_score = model.evaluate(valid, valid, verbose=0) 
-
-        if self.modeltype == 'autoencoder':
-            # determine latent space for valid dataset to calculate metrics
-            latent = tf.keras.Model(inputs=[model.layers[0].input], outputs=[model.layers[0].output])
-            val = latent.predict(valid)
+            
+            # mean loss since loss of model is the sum of all individual
+            train_score = model.evaluate(train, train, verbose=0)
+            valid_score = model.evaluate(valid, valid, verbose=0) 
+        
+        elif self.modeltype == 'contrastiverepresentation':
+            if self.meta is None:
+                raise NameError("Upload metadata if performing contrastive representation learning.")
+            else:
+                y_all = pd.read_csv(Path(self.meta), index_col=0)
+                print(y_all.columns[0] + " will be used for categorical variable.")
+                y_train = y_all.loc[self.x_train.index,].iloc[:,0]
+                y_valid = y_all.loc[self.x_valid.index,].iloc[:,0]
+                
+            model = ec.build_contrastiverep(train=train, valid=valid,
+                                            config=config)
+            model.compile(loss=ec.LiftedStructLoss(),
+                          optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
+            
+            model.fit(train, y_train,
+                  batch_size=config['batchsize'],
+                  epochs=int(budget),
+                  verbose=0,
+                  callbacks=get_callbacks(scheduler=self.scheduler, budget=budget, config=config, x_train=self.x_train, model=model),
+                  validation_data=(valid, y_valid))
+            
+            # mean loss since loss of model is the sum of all individual
+            train_score = model.evaluate(train, y_train, verbose=0)
+            valid_score = model.evaluate(valid, y_valid, verbose=0) 
 
         # Metric dict
         metrics = {
@@ -169,15 +202,15 @@ class KerasWorker(Worker):
         """
         cs = CS.ConfigurationSpace()
 
-        lr = CSH.UniformFloatHyperparameter('lr', lower=1e-6, upper=1e-1, default_value='0.005', log=True)
-
+        lr = CSH.UniformFloatHyperparameter('lr', lower=1e-6, upper=1e-1, default_value=0.005, log=True)
+        
         dropout_rate = CSH.UniformFloatHyperparameter('dropout_rate', lower=0.0, upper=0.98, default_value=0.25,
                                                       log=False)
-        noise = CSH.CategoricalHyperparameter('noise', [True, False])
+        noise = CSH.CategoricalHyperparameter('noise', ['True', 'False'])
         noise_std = CSH.UniformFloatHyperparameter('noise_std', lower=0.2, upper=1.0, default_value=0.5, log=False)
 
         cs.add_hyperparameters([lr, dropout_rate, noise, noise_std])
-        cond = CS.EqualsCondition(noise_std, noise, True)
+        cond = CS.EqualsCondition(noise_std, noise, 'True')
         cs.add_condition(cond)
 
         ntotal = np.clip(ntotal, a_min=0, a_max=10000)
@@ -187,7 +220,7 @@ class KerasWorker(Worker):
         nlayers = CSH.UniformIntegerHyperparameter('nlayers', lower=2, upper=4, default_value=2)
         cs.add_hyperparameters([nfeatures, nlatent, nlayers])
 
-        batchnorm = CSH.CategoricalHyperparameter('batchnorm', [True, False])
+        batchnorm = CSH.CategoricalHyperparameter('batchnorm', ['True', 'False'])
         l2reg = CSH.UniformFloatHyperparameter('l2reg', lower=1e-6, upper=1e-3, default_value=1e-5, log=True)
         batchsize = CSH.UniformIntegerHyperparameter('batchsize', lower=128, upper=1024, default_value=450, log=False)
         cs.add_hyperparameters([batchnorm, l2reg, batchsize])
@@ -200,25 +233,25 @@ class KerasWorker(Worker):
 
 # set up directory for results - need to have ec file in same working directory as this file to run properly
 if args.datetime:
-    run_id = ("autoencoder_" + args.datetime)
+    run_id = (args.modeltype + "_" + args.datetime)
 else:
-    run_id = time.strftime("autoencoder_%Y_%m_%d-%H_%M_%S")
+    run_id = time.strftime(args.modeltype + "_%Y_%m_%d-%H_%M_%S")
     
 if args.output_directory == "output":
     args.output_directory = Path.cwd() / 'output'
 else:
     args.output_directory = Path(args.output_directory)
 
-modelpath = args.output_directory / 'Raw Python Package' / 'Autoencoder' / run_id
+modelpath = args.output_directory / 'Raw Python Package' / 'Encoder' / run_id
 if not os.path.exists(modelpath): modelpath.mkdir(parents=True)
 
-qc_path = args.output_directory / 'Quality Assessment' / 'Autoencoder' / run_id
+qc_path = args.output_directory / 'Quality Assessment' / 'Encoder' / run_id
 if not os.path.exists(qc_path): qc_path.mkdir(parents=True)
 
-dataset_path = args.output_directory / 'Data Representations' / 'Autoencoder' / run_id
+dataset_path = args.output_directory / 'Data Representations' / 'Encoder' / run_id
 if not os.path.exists(dataset_path): dataset_path.mkdir(parents=True)
 
-print("Autoencoder Run: ", run_id)
+print("Encoder Run: ", run_id)
 
 if args.debug == "True":
     worker = KerasWorker(run_id='0', train_data=args.train_data,
@@ -332,37 +365,50 @@ elif args.debug == "False":
         for t in args.test_data:
             test[t] = x_test[t].loc[:, feature_order[0:config['nfeatures']]]
 
-    model = ec.build_autoencoder(train, valid, config)
 
-    model.compile(loss=tf.keras.losses.mean_squared_error,
-                  optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
-    
-    if args.scheduler == '1cycle':
-        onecycle_cb = ec.OneCycleLearningRate(np.ceil(train.shape[0] / config['batchsize']) * args.max_budget,
-                                          max_rate=config['lr'])
-        callbacks = [onecycle_cb]
-        
-    elif args.scheduler == '1cycle2':
-        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.onecycle_lr(config['lr'], args.max_budget, 10, model=model))
-        momentum_scheduler = ec.OneCycleMomentumCallback(args.max_budget, 10)
-        callbacks = [lr_scheduler, momentum_scheduler]
-        
-    elif args.scheduler == 'exponential':
-        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(ec.exponential_decay(lr0=config['lr'], s=config['s']))
-        callbacks = [lr_scheduler]
-        
-    elif args.scheduler == 'power':
-        lr_scheduler = tf.keras.callbacks.LearningRateScheduler(
-        ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
-        callbacks = [lr_scheduler]
+    if args.modeltype == 'autoencoder':
+            model = ec.build_autoencoder(train=train, valid=valid,
+                                         config=config)
 
+            model.compile(loss=tf.keras.losses.mean_squared_error,
+                      optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
+            
+            history = model.fit(train, train,
+                    batch_size=config['batchsize'],
+                    epochs=int(args.max_budget),
+                    verbose=0,
+                    callbacks=get_callbacks(scheduler=args.scheduler, budget=args.max_budget, config=config, x_train=x_train, model=model),
+                    validation_data=(valid, valid))
+            
+            # mean loss since loss of model is the sum of all individual
+            train_score = model.evaluate(train, train, verbose=0)
+            valid_score = model.evaluate(valid, valid, verbose=0) 
+        
+    elif args.modeltype == 'contrastiverepresentation':
+        if args.meta is None:
+            raise NameError("Upload metadata if performing contrastive representation learning.")
+        else:
+            y_all = pd.read_csv(Path(args.meta), index_col=0)
+            print(y_all.columns[0] + " will be used for categorical variable.")
+            y_train = y_all.loc[x_train.index,].iloc[:,0]
+            y_valid = y_all.loc[x_valid.index,].iloc[:,0]
+            
+        model = ec.build_contrastiverep(train=train, valid=valid,
+                                        config=config)
+        model.compile(loss=ec.LiftedStructLoss(),
+                        optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']))
+        
+        history = model.fit(train, y_train,
+                batch_size=config['batchsize'],
+                epochs=int(args.max_budget),
+                verbose=0,
+                callbacks=get_callbacks(scheduler=args.scheduler, budget=args.max_budget, config=config, x_train=x_train, model=model),
+                validation_data=(valid, y_valid))
+        
+        # mean loss since loss of model is the sum of all individual
+        train_score = model.evaluate(train, y_train, verbose=0)
+        valid_score = model.evaluate(valid, y_valid, verbose=0) 
 
-    history = model.fit(train, train,
-                        batch_size=config['batchsize'],
-                        epochs=int(args.max_budget),
-                        verbose=0,
-                        callbacks=callbacks,
-                        validation_data=(valid, valid))
 
     model.save(qc_path / 'model')
 
@@ -403,14 +449,6 @@ elif args.debug == "False":
                         run_id + '-' + Path(t).stem + '.csv'))
 
 
-    # mean loss since model is sum of individual
-    train_score = model.evaluate(train, train, verbose=0) 
-    valid_score = model.evaluate(valid, valid, verbose=0)
-
-    if args.modeltype == 'autoencoder':
-        # determine latent space for valid dataset to calculate metrics
-        latent = tf.keras.Model(inputs=[model.layers[0].input], outputs=[model.layers[0].output])
-
     metricsdict = {
         'valid loss': valid_score,
         'train loss': train_score,
@@ -436,5 +474,5 @@ elif args.debug == "False":
     with open((modelpath / (run_id + '-encoder_input_args.json')), "w") as handle:
         json.dump(argsdict, handle)
 
-print("\033[1;32m Autoencoder Run: ", run_id)
+print("\033[1;32m Encoder Run: ", run_id)
 
