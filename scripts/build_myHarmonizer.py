@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 
 parser = argparse.ArgumentParser(description='This script builds a harmonizer object')
-parser.add_argument('-a', '--autoencoder', type=str, required=True,
-                    help='Path to directory containing autoencoder and autoencoder run metadata.')
+parser.add_argument('-e', '--encoder', type=str, required=True,
+                    help='Path to directory containing encoder and encoder run metadata.')
 parser.add_argument('-p', '--preprocessing', type=str, required=True,
                     help='Path to normalization model json or txt. Default formatted to '
                          'preprocess_YYYY_mm_dd-HH_MM_SS_prepmethod_none_model.json. '
@@ -80,11 +80,11 @@ except:
 
 
 
-# import autoencoder data and metadata
+# import encoder data and metadata
 for a in ['encoder_config',
           'encoder_input_args',
           'encoder_metrics']:
-    foi = glob.glob((Path(args.autoencoder) / ('*-' + a + '.json')).as_posix())[0]
+    foi = glob.glob((Path(args.encoder) / ('*-' + a + '.json')).as_posix())[0]
     with open(foi, "r") as handle:
         myHarmonizerdict['modelmeta'][a] = json.load(handle)
 
@@ -92,7 +92,7 @@ for a in ['encoder_config',
 for a in ['encoder_model_architecture',
           'encoder_model_weights']:
 
-    foi = glob.glob((Path(args.autoencoder) / ('*-' + a + '.json')).as_posix())[0]
+    foi = glob.glob((Path(args.encoder) / ('*-' + a + '.json')).as_posix())[0]
     with open(foi, "r") as handle:
         myHarmonizerdict['models'][a] = json.load(handle)
 

@@ -47,6 +47,7 @@ parser.add_argument('--featureselection', type=str,
                     help="Method by which features are ranked. Options are variance and impurity where impurity is " 
                     "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
                     default='variance')
+parser.add_argument('--modeltype', type=str, help="autoencoder or contrastiverepresentation architectures.", default="autoencoder")
 
 args = parser.parse_args()
 
@@ -111,22 +112,27 @@ else:
 
 print(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
-           args.output_directory + '" --min_budget ' +
+           args.output_directory + '" -m "' +
+           args.meta + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
            str(args.max_budget) + ' --n_iterations ' +
-           str(args.n_iterations) + ' --scheduler ' +
-           fs + 
-           args.scheduler + ' --datetime ' +
+           str(args.n_iterations) + ' --modeltype ' +
+           str(args.modeltype) + ' --scheduler ' +
+           str(args.scheduler) + ' --featureselection ' +
+           str(args.featureselection) + ' --datetime ' +
            dt))
 
 os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/encoder_optimization.py -d "' +
            normalized_train_data + dataset1 + '" -o "' +
            args.output_directory + '" --modeltype ' +
-           args.modeltype + ' --min_budget ' +
+           args.modeltype + ' -m "' +
+           args.meta + '" --min_budget ' +
            str(args.min_budget) + ' --max_budget ' +
            str(args.max_budget) + ' --n_iterations ' +
-           str(args.n_iterations) + ' --scheduler ' +
-           args.scheduler + fs + ' --datetime ' +
+           str(args.n_iterations) + ' --modeltype ' +
+           str(args.modeltype)+ ' --scheduler ' +
+           str(args.scheduler) + ' --featureselection ' +
+           str(args.featureselection) + ' --datetime ' +
            dt))
 
 # Run build_myHarmonizer
@@ -147,17 +153,17 @@ else:
     raise KeyError(args.preprocessing_method + ' is not one of none, LS, TPM, QT, RLE, VST, GeVST, TMM, GeTMM')
 
 
-latent_train_data = (Path(args.output_directory) / "Data Representations" / 'Autoencoder' / ('autoencoder_' + dt) /
-                         ('autoencoder_' + dt + '-train.csv')).as_posix()
-latent_valid_data = (Path(args.output_directory) / "Data Representations" / 'Autoencoder' / ('autoencoder_' + dt) /
-                         ('autoencoder_' + dt + '-valid.csv')).as_posix()
+latent_train_data = (Path(args.output_directory) / "Data Representations" / 'Encoder' / (args.modeltype + '_' + dt) /
+                         (args.modeltype+ '_' + dt + '-train.csv')).as_posix()
+latent_valid_data = (Path(args.output_directory) / "Data Representations" / 'Encoder' / (args.modeltype + '_' + dt) /
+                         (args.modeltype + '_' + dt + '-valid.csv')).as_posix()
 
 if args.test_data:
     latent_test_data = {}
     for t in args.test_data:
         latent_test_data[t] = (
-                    Path(args.output_directory) / "Data Representations" / 'Autoencoder' / ('autoencoder_' + dt) /
-                    ('autoencoder_' + dt + '-' + Path(t).stem + '.csv')).as_posix()
+                    Path(args.output_directory) / "Data Representations" / 'Encoder' / (args.modeltype + '_' + dt) /
+                    (args.modeltype + '_' + dt + '-' + Path(t).stem + '.csv')).as_posix()
 
     dataset2 = ('" "' + latent_valid_data +
                '" "' + '" "'.join(latent_test_data.values()))
@@ -167,9 +173,9 @@ else:
 
 
 if args.meta:
-    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -e "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / (
-                           'autoencoder_' + dt)).as_posix() + '" -p "' +
+                           args.modeltype + '_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                ('preprocess_' + dt + '-' + args.preprocessing_method + '_' + args.scaling_method.lower() + '_model.json')).as_posix() +
@@ -177,9 +183,9 @@ if args.meta:
                dt + ' -d "' + latent_train_data + dataset2 + '" -o "' + args.output_directory + '"'
                ))
 else:
-    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -e "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / (
-                           'autoencoder_' + dt)).as_posix() + '" -p "' +
+                           args.modeltype + '_' + dt)).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                (Path(args.output_directory) / 'Raw Python Package' / 'Normalized' / ('preprocess_' + dt) /
                 ('preprocess_' + dt + '-' + args.preprocessing_method + '_' + args.scaling_method.lower() + '_model.json')).as_posix() +
