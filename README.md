@@ -208,11 +208,11 @@ In general, the higher the n_iterations the better, because each iteration gives
 The sample data in the supporting folder can again be used to test this function. When running actual data, it is not recommended to cut the min_budget, max_budget, and n_iterations this low. Datetime need not be included for a typical run and will be set to the run datetime.
 
 ```shell
-python scripts/autoencoder_optimization.py -d \
-"output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" \ 
--v "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" \ 
--t "output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" \
--m supporting/meta.csv \
+python scripts/encoder_optimization.py -d \
+"output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_train-QT_feature.csv" -v \
+"output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_valid-QT_feature.csv" -t \ 
+"output/Data Representations/Normalized/preprocess_1900_01_01-00_00_00/preprocess_1900_01_01-00_00_00_test-QT_feature.csv" -m \
+supporting/meta.csv \
 --min_budget 10 --max_budget 100 --n_iterations 2 --datetime 2000_01_01-00_00_00
 ```
 
@@ -229,7 +229,7 @@ python scripts/categorical_evaluation.py -d supporting/train.csv -t supporting/t
 This final module utilizes the outputs from normalization, scaling, and autoencoder transformations to build a myHarmonizer object, that can be input into the myHarmonizer python package or web application to transform new datasets that fall within the domain of the knowledge base datasets into the same condensed data representation as the output from the autoencoder. Assuming that the output directory tree has been kept intact during the running of the normalization and autoencoder modules, a convenience script has been written to automatically pull all of the necessary data and models based on the name of the autoencoder of interest (can be found at the end of the autoencoder optimization script). If output directory is not located in the current working directory, then the output folder should also be supplied.
 
 ```shell
-python scripts/build_myHarmonizer_fromEncoder.py -a autoencoder_2000_01_01-00_00_00
+python scripts/build_myHarmonizer_fromEncoder.py -e autoencoder_2000_01_01-00_00_00
 ```
 
 If the directory tree has been altered or the names changed, then it is also possible to supply the paths to the necessary models individually. Please see documentation for more details.

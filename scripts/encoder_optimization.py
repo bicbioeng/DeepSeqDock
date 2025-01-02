@@ -64,7 +64,7 @@ parser.add_argument('--debug', help='Mode using code in. Debug tests on one rand
 parser.add_argument('--nic_name', type=str, help='Which network interface to use for communication.', default='lo')
 parser.add_argument('--scheduler', type=str, help='Learning rate scheduler. One of 1cycle, 1cycle2, exponential, power',
                     default="power")
-parser.add_argument('--modeltype', type=str, help="Autoencoder or contrastiverepresentation architectures.", default="autoencoder")
+parser.add_argument('--modeltype', type=str, help="autoencoder or contrastiverepresentation architectures.", default="autoencoder")
 parser.add_argument('--featureselection', type=str, 
                     help="Method by which features are ranked. Options are variance and impurity. Impurity is " 
                     "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",

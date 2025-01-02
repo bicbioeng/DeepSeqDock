@@ -7,11 +7,11 @@ import re
 import glob
 
 parser = argparse.ArgumentParser(
-    description='This script builds a harmonizer object from an autoencoder model. This script assumes that all '
+    description='This script builds a harmonizer object from an encoder model. This script assumes that all '
                 'files within the Raw Python Package retain their default names and locations within the output directory.')
 
-parser.add_argument('-a', '--autoencoder', type=str, required=True,
-                    help='Name of autoencoder run. e.g. autoencoder_2022_08_27-13_14_39')
+parser.add_argument('-e', '--encoder', type=str, required=True,
+                    help='Name of encoder run. e.g. autoencoder_2022_08_27-13_14_39')
 parser.add_argument('-m', '--meta', type=str,
                     help='Path to metadata csv. Named samples as first row and characteristic metadata as columns.')
 parser.add_argument('-o', '--output_directory', type=str,
@@ -28,8 +28,8 @@ print("myHarmonizer run: myHarmonizer-" + dt)
 
 
 # Determine normalization, scaling method
-with open((Path(args.output_directory) / "Raw Python Package" / "Autoencoder" / args.autoencoder /
-          (args.autoencoder + '-encoder_input_args.json')), "r") as handle:
+with open((Path(args.output_directory) / "Raw Python Package" / "Encoder" / args.encoder /
+          (args.encoder + '-encoder_input_args.json')), "r") as handle:
     encoder_input_args = json.load(handle)
 
 try:
@@ -42,7 +42,7 @@ try:
     prep_run_id = re.search('preprocess_\d{4}_\d{2}_\d{2}-\d{2}_\d{2}_\d{2}', encoder_input_args['train_data']).group(0)
 
 except:
-    raise NameError('Normalization and scaling methods could not be parsed from autoencoder metadata.')
+    raise NameError('Normalization and scaling methods could not be parsed from encoder metadata.')
 
 # Identify normalization file location
 if norm in ['LS', 'TPM', 'QT', 'RLE']:
@@ -70,18 +70,18 @@ else:
 
 # Identify dataset locations
 doi = glob.glob((Path(args.output_directory) / 'Data Representations' / 'Encoder' /
-                 args.autoencoder / (args.autoencoder + "*.csv")).as_posix())
+                 args.encoder / (args.encoder + "*.csv")).as_posix())
 if args.meta:
-    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.autoencoder).as_posix() + '" -p "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -e "' +
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.encoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path +
                '" -m "' + args.meta + '" --datetime ' +
                 dt + ' -d "' +
                '" "'.join(doi) + '" -o "' + args.output_directory + '"'))
 else:
-    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -a "' +
-               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.autoencoder).as_posix() + '" -p "' +
+    os.system(('python ' + Path(__file__).parent.resolve().as_posix() + '/build_myHarmonizer.py -e "' +
+               (Path(args.output_directory) / 'Raw Python Package' / 'Encoder' / args.encoder).as_posix() + '" -p "' +
                preprocessing_path + '" -s "' +
                scaling_path + '" --datetime ' +
                 dt + ' -d "' +
