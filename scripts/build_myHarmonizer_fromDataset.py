@@ -47,7 +47,7 @@ parser.add_argument('--featureselection', type=str,
                     help="Method by which features are ranked. Options are variance and impurity where impurity is " 
                     "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
                     default='variance')
-parser.add_argument('--modeltype', type=str, help="autoencoder or contrastiverepresentation architectures.", default="autoencoder")
+#parser.add_argument('--modeltype', type=str, help="autoencoder or contrastiverepresentation architectures.", default="autoencoder")
 
 args = parser.parse_args()
 

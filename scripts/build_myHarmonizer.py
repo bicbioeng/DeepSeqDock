@@ -101,7 +101,9 @@ for a in ['encoder_model_architecture',
 if args.data:
     data = []
     for d in args.data:
-        data.append(pd.read_csv(d, index_col=0).astype('float64').round(4))
+        rd = pd.read_csv(d, index_col=0).astype('float64').round(4)
+        rd.index = (rd.index.astype(str) + '_')
+        data.append(rd)
     myHarmonizerdict['data'] = pd.concat(data).to_json()
 
 # Save myHarmonizer as json
