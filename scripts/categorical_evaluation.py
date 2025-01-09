@@ -13,12 +13,13 @@ import numpy as np
 
 import eval as ev
 from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics import silhouette_score
 
 import warnings
 
 
-parser = argparse.ArgumentParser(description='This script runs an evaluation using three possible methods: classification,'
-                                             'a silhouette indicator, and a Mann Whitney U Test indicator. To run these tests,'
+parser = argparse.ArgumentParser(description='This script runs an evaluation using two possible methods: classification,'
+                                             'and silhouette width. To run these tests,'
                                              'a csv of the data representation with rows as samples and columns as features'
                                              'is required. Additionally, a csv of metadata is required with sample in the rows'
                                              'and at least one column defining discrete (categorical) distinction of interest.'
@@ -47,8 +48,8 @@ parser.add_argument('-o', '--output_directory', type=str,
 
 parser.add_argument('-e', '--eval', type=str, nargs="+",
                     help='List of one or more discrete evaluation methods to run. Defaults to all methods. '
-                         'Options are: classification, silhouette, utest',
-                    default=['classification', 'silhouette', 'utest'])
+                         'Options are: classification, silhouette',
+                    default=['classification', 'silhouette'])
 
 parser.add_argument('-p', '--plots', type=str,
                     help='Plot barplots of outcomes for each method. Options are True  or False for no plots.',
@@ -150,10 +151,8 @@ for e in args.eval:
         except:
             warnings.warn("Training data was not uploaded or greater than three samples could not be mapped so classification evaluation was not run.")
 
-            
-                
     if e == 'silhouette':
-        
+
         # Calculate similarities
         pearson = pd.DataFrame(test, index=test.index).transpose().corr()
         spearman = pd.DataFrame(test, index=test.index).transpose().corr(method="spearman")
@@ -163,108 +162,153 @@ for e in args.eval:
         man = ev.calculate_manhattan(test)
 
         # Calculate silhouette metrics
-        ps = ev.calculate_silhouette_from_distance(pearson, ytest, distance=False)
-        ss = ev.calculate_silhouette_from_distance(spearman, ytest, distance=False)
-        cs = ev.calculate_silhouette_from_distance(cos, ytest, distance=True)
-        ccs = ev.calculate_silhouette_from_distance(ccc.round(6), ytest, distance=False)
-        es = ev.calculate_silhouette_from_distance(euc, ytest, distance=True)
-        ms = ev.calculate_silhouette_from_distance(man, ytest, distance=True)
+        ps = silhouette_score((1-pearson), ytest, metric="precomputed")
+        ss = silhouette_score((1-spearman), ytest, metric="precomputed")
+        cs = silhouette_score(cos, ytest, metric="precomputed")
+        ccs = silhouette_score((1-ccc.round(6)), ytest, metric="precomputed")
+        es = silhouette_score(euc, ytest, metric="precomputed")
+        ms = silhouette_score(man, ytest, metric="precomputed")
 
-        # Build dataframe
-        sil_df = pd.DataFrame(zip(ps.values(), ss.values(),
-                                  ccs.values(), es.values(),
-                                  ms.values(), cs.values()),
-                                index=ps.keys(),
-                                columns=['Pearson', 'Spearman',
-                                         'CCC', 'Euclidean',
-                                         'Manhattan', 'Cosine'])
+        sil_df = pd.DataFrame([ps, ss, cs, ccs, es, ms],
+                              index=['Pearson', 'Spearman',
+                                     'Cosine', 'CCC',
+                                     'Euclidean', 'Manhattan'],
+                              columns=['Silhouette'])
         sil_df.to_csv(qc_path / 'silhouette_results.csv')
 
         # Plot figure
         if args.plots == 'True':
             sil_df2 = pd.melt(sil_df.reset_index(), id_vars='index')
-            sil_df2.columns = ['Comparison', 'Similarity', 'Value']
+            sil_df2.columns = ['Similarity', 'Variable', 'Silhouette']
 
             plt.clf()
 
-            if len(sil_df2['Comparison'].unique()) < 4:
-
-                ax = sns.barplot(x='Comparison', y='Value', hue='Similarity', data=sil_df2,
+            ax = sns.barplot(x='Similarity', y='Silhouette', data=sil_df2,
                                  palette='colorblind')
-                ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-                ax.set_ylim(-0.1, 1)
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+            ax.set_ylim(0,1)
 
-                fig = ax.get_figure()
-                fig.savefig(qc_path/'silhouette_barplot.png',
+            fig = ax.get_figure()
+            fig.savefig(qc_path/'silhouette_barplot.png',
                             bbox_inches='tight')
-            else:
-                cg = sns.clustermap(sil_df,
-                                    cmap="mako", vmin=-0.1, vmax=1)
-                plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=30)
-                plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
 
-                cg.savefig(qc_path/'silhouette_heatmap.png',
-                            bbox_inches='tight')
-    if e == 'utest':
+            
+    # silhouette index - 2 cluster comparison version useful for determining how similar clusters are            
+    # if e == 'silhouette':
+        
+    #     # Calculate similarities
+    #     pearson = pd.DataFrame(test, index=test.index).transpose().corr()
+    #     spearman = pd.DataFrame(test, index=test.index).transpose().corr(method="spearman")
+    #     cos = pd.DataFrame(cosine_distances(test), index=test.index, columns=test.index)
+    #     ccc = ev.calculate_ccc(test)
+    #     euc = ev.calculate_euc(test)
+    #     man = ev.calculate_manhattan(test)
 
-        if ('silhouette' not in args.eval):
-            # Calculate similarities only if not already run
-            pearson = pd.DataFrame(test, index=test.index).transpose().corr()
-            spearman = pd.DataFrame(test, index=test.index).transpose().corr(method="spearman")
-            cos = pd.DataFrame(cosine_distances(test), index=test.index, columns=test.index)
-            ccc = ev.calculate_ccc(test)
-            euc = ev.calculate_euc(test)
-            man = ev.calculate_manhattan(test)
+    #     # Calculate silhouette metrics
+    #     ps = ev.calculate_silhouette_from_distance(pearson, ytest, distance=False)
+    #     ss = ev.calculate_silhouette_from_distance(spearman, ytest, distance=False)
+    #     cs = ev.calculate_silhouette_from_distance(cos, ytest, distance=True)
+    #     ccs = ev.calculate_silhouette_from_distance(ccc.round(6), ytest, distance=False)
+    #     es = ev.calculate_silhouette_from_distance(euc, ytest, distance=True)
+    #     ms = ev.calculate_silhouette_from_distance(man, ytest, distance=True)
 
-        # Build data table for similarity distributions
-        pearsondf = ev.discrete_correlation_distribution(pearson, ytest)
-        spearmandf = ev.discrete_correlation_distribution(spearman, ytest)
-        cosdf = ev.discrete_correlation_distribution(cos, ytest)
-        cccdf = ev.discrete_correlation_distribution(ccc, ytest)
-        eucdf = ev.discrete_correlation_distribution(euc, ytest)
-        mandf = ev.discrete_correlation_distribution(man, ytest)
+    #     # Build dataframe
+    #     sil_df = pd.DataFrame(zip(ps.values(), ss.values(),
+    #                               ccs.values(), es.values(),
+    #                               ms.values(), cs.values()),
+    #                             index=ps.keys(),
+    #                             columns=['Pearson', 'Spearman',
+    #                                      'CCC', 'Euclidean',
+    #                                      'Manhattan', 'Cosine'])
+    #     sil_df.to_csv(qc_path / 'silhouette_results.csv')
 
-        # Calculate t-test metrics
-        pt = ev.calculate_mannwhitneyu_from_distribution(pearsondf, ytest)
-        st = ev.calculate_mannwhitneyu_from_distribution(spearmandf, ytest)
-        ct = ev.calculate_mannwhitneyu_from_distribution(cosdf, ytest, distance=True)
-        cct = ev.calculate_mannwhitneyu_from_distribution(cccdf, ytest)
-        et = ev.calculate_mannwhitneyu_from_distribution(eucdf, ytest, distance=True)
-        mt = ev.calculate_mannwhitneyu_from_distribution(mandf, ytest, distance=True)
+    #     # Plot figure
+    #     if args.plots == 'True':
+    #         sil_df2 = pd.melt(sil_df.reset_index(), id_vars='index')
+    #         sil_df2.columns = ['Comparison', 'Similarity', 'Value']
 
-        # Build dataframe
-        utest_df = pd.DataFrame(zip(pt.values(), st.values(),
-                                  cct.values(), et.values(),
-                                  mt.values(), ct.values()),
-                                index=pt.keys(),
-                                columns=['Pearson', 'Spearman',
-                                         'CCC', 'Euclidean',
-                                         'Manhattan', 'Cosine'])
-        utest_df.to_csv(qc_path / 'utest_results.csv')
+    #         plt.clf()
 
-        # Plot figure
-        if args.plots == 'True':
-            utest_df2 = pd.melt(utest_df.reset_index(), id_vars='index')
-            utest_df2.columns = ['Comparison', 'Similarity', 'Value']
+    #         if len(sil_df2['Comparison'].unique()) < 4:
 
-            plt.clf()
+    #             ax = sns.barplot(x='Comparison', y='Value', hue='Similarity', data=sil_df2,
+    #                              palette='colorblind')
+    #             ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+    #             ax.set_ylim(-0.1, 1)
 
-            if len(utest_df2['Comparison'].unique()) < 4:
+    #             fig = ax.get_figure()
+    #             fig.savefig(qc_path/'silhouette_barplot.png',
+    #                         bbox_inches='tight')
+    #         else:
+    #             cg = sns.clustermap(sil_df,
+    #                                 cmap="mako", vmin=-0.1, vmax=1)
+    #             plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=30)
+    #             plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
 
-                ax = sns.barplot(x='Comparison', y='Value', hue='Similarity', data=utest_df2,
-                                 palette='colorblind')
-                ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
-                ax.set_ylim(0, 100)
+    #             cg.savefig(qc_path/'silhouette_heatmap.png',
+    #                         bbox_inches='tight')
+    
+    # u test one versus rest comparison method
+    # if e == 'utest':
 
-                fig = ax.get_figure()
-                fig.savefig(qc_path/'utest_barplot.png',
-                            bbox_inches='tight')
-            else:
-                cg = sns.clustermap(utest_df,
-                                    cmap="mako", vmin=0, vmax=100)
-                plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=30)
-                plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
+    #     if ('silhouette' not in args.eval):
+    #         # Calculate similarities only if not already run
+    #         pearson = pd.DataFrame(test, index=test.index).transpose().corr()
+    #         spearman = pd.DataFrame(test, index=test.index).transpose().corr(method="spearman")
+    #         cos = pd.DataFrame(cosine_distances(test), index=test.index, columns=test.index)
+    #         ccc = ev.calculate_ccc(test)
+    #         euc = ev.calculate_euc(test)
+    #         man = ev.calculate_manhattan(test)
 
-                cg.savefig(qc_path/'utest_heatmap.png',
-                            bbox_inches='tight')
+    #     # Build data table for similarity distributions
+    #     pearsondf = ev.discrete_correlation_distribution(pearson, ytest)
+    #     spearmandf = ev.discrete_correlation_distribution(spearman, ytest)
+    #     cosdf = ev.discrete_correlation_distribution(cos, ytest)
+    #     cccdf = ev.discrete_correlation_distribution(ccc, ytest)
+    #     eucdf = ev.discrete_correlation_distribution(euc, ytest)
+    #     mandf = ev.discrete_correlation_distribution(man, ytest)
+
+    #     # Calculate t-test metrics
+    #     pt = ev.calculate_mannwhitneyu_from_distribution(pearsondf, ytest)
+    #     st = ev.calculate_mannwhitneyu_from_distribution(spearmandf, ytest)
+    #     ct = ev.calculate_mannwhitneyu_from_distribution(cosdf, ytest, distance=True)
+    #     cct = ev.calculate_mannwhitneyu_from_distribution(cccdf, ytest)
+    #     et = ev.calculate_mannwhitneyu_from_distribution(eucdf, ytest, distance=True)
+    #     mt = ev.calculate_mannwhitneyu_from_distribution(mandf, ytest, distance=True)
+
+    #     # Build dataframe
+    #     utest_df = pd.DataFrame(zip(pt.values(), st.values(),
+    #                               cct.values(), et.values(),
+    #                               mt.values(), ct.values()),
+    #                             index=pt.keys(),
+    #                             columns=['Pearson', 'Spearman',
+    #                                      'CCC', 'Euclidean',
+    #                                      'Manhattan', 'Cosine'])
+    #     utest_df.to_csv(qc_path / 'utest_results.csv')
+
+    #     # Plot figure
+    #     if args.plots == 'True':
+    #         utest_df2 = pd.melt(utest_df.reset_index(), id_vars='index')
+    #         utest_df2.columns = ['Comparison', 'Similarity', 'Value']
+
+    #         plt.clf()
+
+    #         if len(utest_df2['Comparison'].unique()) < 4:
+
+    #             ax = sns.barplot(x='Comparison', y='Value', hue='Similarity', data=utest_df2,
+    #                              palette='colorblind')
+    #             ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+    #             ax.set_ylim(0, 100)
+
+    #             fig = ax.get_figure()
+    #             fig.savefig(qc_path/'utest_barplot.png',
+    #                         bbox_inches='tight')
+    #         else:
+    #             cg = sns.clustermap(utest_df,
+    #                                 cmap="mako", vmin=0, vmax=100)
+    #             plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=30)
+    #             plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
+
+    #             cg.savefig(qc_path/'utest_heatmap.png',
+    #                         bbox_inches='tight')
 
