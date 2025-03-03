@@ -7,6 +7,7 @@ import numpy as np
 
 from typeguard import typechecked
 from typing import Optional, Union, List
+from tensorflow.keras import layers, Model
 
 
 ## From tensorflow_addons
@@ -465,3 +466,30 @@ def build_contrastiverep(train, valid, config):
             enc.add(tf.keras.layers.BatchNormalization())
 
     return tf.keras.models.Sequential([enc])
+
+def build_pca(train, config):
+    """
+    Build PCA model using Keras with parameters in the config dictionary.
+    This model learns the principal components as a linear transformation
+    and reconstructs the input using the transpose of the learned components.
+    """
+    input_dim = train.shape[1]
+    n_components = min(config['nlatent'], input_dim)
+    
+    model = tf.keras.Sequential(name='PCA')
+    
+    # Centering Layer
+    model.add(layers.Lambda(lambda x: x - tf.reduce_mean(x, axis=0), input_shape=(input_dim,)))
+    
+    # Linear Projection to Reduced Dimensional Space
+    projection_layer = layers.Dense(n_components, 
+                                    activation=None,
+                                    use_bias=False,
+                                    kernel_initializer='glorot_uniform',
+                                    name='projection')
+    model.add(projection_layer)
+    
+    # Reconstruction Layer using Transpose of Projection Weights
+    model.add(layers.Lambda(lambda x: tf.matmul(x, tf.transpose(projection_layer.kernel)), name='reconstruction'))
+    
+    return model

@@ -1,5 +1,3 @@
-# Default autoencoder optimization - does not contain any dataset specific evaluations
-
 import logging
 import matplotlib.font_manager
 
@@ -29,6 +27,8 @@ import ConfigSpace as CS
 import ConfigSpace.hyperparameters as CSH
 
 import sklearn.ensemble as ensemble
+from sklearn.decomposition import PCA
+
 
 # import matplotlib
 # matplotlib.use('Agg') # Must be before importing matploblib.pyplot or pylab (see https://stackoverflow.com/questions/4706451/how-to-save-a-figure-remotely-with-pylab/4706614#4706614)
@@ -64,7 +64,7 @@ parser.add_argument('--debug', help='Mode using code in. Debug tests on one rand
 parser.add_argument('--nic_name', type=str, help='Which network interface to use for communication.', default='lo')
 parser.add_argument('--scheduler', type=str, help='Learning rate scheduler. One of 1cycle, 1cycle2, exponential, power',
                     default="power")
-parser.add_argument('--modeltype', type=str, help="autoencoder or contrastiverepresentation architectures.", default="autoencoder")
+parser.add_argument('--modeltype', type=str, help="autoencoder, contrastiverepresentation or pca architectures.", default="autoencoder")
 parser.add_argument('--featureselection', type=str, 
                     help="Method by which features are ranked. Options are variance and impurity. Impurity is " 
                     "based on the feature_importances_ attribute from a fitted RandomForestClassifier in sklearn.",
@@ -95,7 +95,6 @@ def get_callbacks(scheduler, budget, config, x_train, model):
             ec.decayed_learning_rate(lr0=config['lr'], s=config['s']))
             callbacks = [lr_scheduler]
         return callbacks
-
 
 class KerasWorker(Worker):
     def __init__(self, train_data, valid_data, scheduler, modeltype=args.modeltype, featureselection=args.featureselection, meta=args.meta, **kwargs):
@@ -185,6 +184,33 @@ class KerasWorker(Worker):
             train_score = model.evaluate(train, y_train, verbose=0)
             valid_score = model.evaluate(valid, y_valid, verbose=0) 
 
+        elif self.modeltype == 'pca':
+            model = ec.build_pca(train, config)
+
+            # Compile the model
+            model.compile(
+                loss=tf.keras.losses.MeanSquaredError(),
+                optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']),
+                metrics=[tf.keras.metrics.MeanSquaredError()]
+            )
+            
+            # Train the model
+            model.fit(
+                train, train,
+                batch_size=config['batchsize'],
+                epochs=int(budget),
+                verbose=0,
+                callbacks=get_callbacks(scheduler=self.scheduler, budget=budget, config=config, x_train=self.x_train, model=model),
+                validation_data=(valid, valid)
+            )
+    
+
+             # Evaluate the model
+            train_score = float(np.mean(model.evaluate(train, train, verbose=0)))
+            valid_score = float(np.mean(model.evaluate(valid, valid, verbose=0)))
+
+
+
         # Metric dict
         metrics = {
             'valid loss': valid_score,
@@ -216,9 +242,16 @@ class KerasWorker(Worker):
         ntotal = np.clip(ntotal, a_min=0, a_max=10000)
 
         nfeatures = CSH.UniformIntegerHyperparameter('nfeatures', lower=250, upper=ntotal, default_value=np.ceil(ntotal/2))
-        nlatent = CSH.UniformIntegerHyperparameter('nlatent', lower=16, upper=250, default_value=150)
+        # nlatent = CSH.UniformIntegerHyperparameter('nlatent', lower=16, upper=250, default_value=150)
         nlayers = CSH.UniformIntegerHyperparameter('nlayers', lower=2, upper=4, default_value=2)
-        cs.add_hyperparameters([nfeatures, nlatent, nlayers])
+        cs.add_hyperparameters([nfeatures, nlayers])
+
+        if args.modeltype in ['autoencoder', 'contrastiverepresentation']:
+            nlatent = CSH.UniformIntegerHyperparameter('nlatent', lower=16, upper=250, default_value=150)
+            cs.add_hyperparameter(nlatent)
+        elif args.modeltype == 'pca':
+            nlatent = CSH.UniformIntegerHyperparameter('nlatent', lower=2, upper=min(250, ntotal), default_value=50)
+            cs.add_hyperparameter(nlatent)
 
         batchnorm = CSH.CategoricalHyperparameter('batchnorm', ['True', 'False'])
         l2reg = CSH.UniformFloatHyperparameter('l2reg', lower=1e-6, upper=1e-3, default_value=1e-5, log=True)
@@ -228,6 +261,7 @@ class KerasWorker(Worker):
         s = CSH.UniformIntegerHyperparameter('s', lower=1, upper=100, default_value=60)
         cs.add_hyperparameter(s)
 
+        
         return cs
 
 
@@ -310,7 +344,11 @@ elif args.debug == "False":
     plt.savefig(qc_path / 'histogram_model_vs_random.png',
                 bbox_inches="tight", pad_inches=1.)
 
-    hpvis.correlation_across_budgets(res)
+    if args.modeltype != 'pca':
+        hpvis.correlation_across_budgets(res)
+    else:
+        print("Skipping correlation calculation for PCA.")
+
     plt.savefig(qc_path / 'correlation_across_budgets.png',
                 bbox_inches="tight", pad_inches=1.)
 
@@ -408,7 +446,37 @@ elif args.debug == "False":
         # mean loss since loss of model is the sum of all individual
         train_score = model.evaluate(train, y_train, verbose=0)
         valid_score = model.evaluate(valid, y_valid, verbose=0) 
+    
 
+    elif args.modeltype == 'pca':
+        print("Running PCA model using Keras...")
+    
+        model = ec.build_pca(train, config)
+
+        # Compile the model
+        model.compile(
+            loss=tf.keras.losses.MeanSquaredError(),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=config['lr']),
+            metrics=[tf.keras.metrics.MeanSquaredError()]
+        )
+        
+        # Train the model
+        model.fit(
+            train, train,
+            batch_size=config['batchsize'],
+            epochs=int(args.max_budget),
+            verbose=0,
+            callbacks=get_callbacks(scheduler=args.scheduler, budget=args.max_budget, config=config, x_train=x_train, model=model),
+            validation_data=(valid, valid)
+        )
+    
+    # Evaluate the model
+        train_score = float(np.mean(model.evaluate(train, train, verbose=0)))
+        valid_score = float(np.mean(model.evaluate(valid, valid, verbose=0)))
+
+        
+        print("Keras PCA Train Loss: ", train_score)
+        print("Keras PCA Valid Loss: ", valid_score)
 
     model.save(qc_path / 'model')
 
@@ -440,19 +508,19 @@ elif args.debug == "False":
     if args.test_data:
         for t in args.test_data:
             n = re.match(r"(?P<prep>preprocess_\d{4}_\d{2}_\d{2}-\d{2}_\d{2}_\d{2}_)(?P<root>.*)(?P<tail>-\w{2,5}_\w+.csv)",
-                         Path(t).name)
+                            Path(t).name)
             if n:
                 pd.DataFrame(tes[t], index=test[t].index).to_csv(dataset_path / (
                         run_id + '-' + n.group('root') + '.csv'))
             else:
                 pd.DataFrame(tes[t], index=test[t].index).to_csv(dataset_path / (
-                        run_id + '-' + Path(t).stem + '.csv'))
-
+                        run_id + '-' + Path(t).stem + '.csv'))        
 
     metricsdict = {
         'valid loss': valid_score,
         'train loss': train_score,
-        'features': feature_order[0:config['nfeatures']].to_list()
+        'features': feature_order[0:config['nfeatures']].to_list() if 'feature_order' in locals() else [],
+        'model_type': args.modeltype
     }
 
     with open((modelpath / (run_id + '-encoder_metrics.json')), "w") as handle:
@@ -475,4 +543,8 @@ elif args.debug == "False":
         json.dump(argsdict, handle)
 
 print("\033[1;32m Encoder Run: ", run_id)
+
+
+import tensorflow as tf
+from tensorflow.keras import layers, Model
 
